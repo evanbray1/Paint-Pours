@@ -1,4 +1,3 @@
-#%%
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap,LinearSegmentedColormap
 from scipy.spatial import Voronoi, voronoi_plot_2d
@@ -12,6 +11,7 @@ import cv2
 plt.close('all')
 start_time = time.time()
 # np.random.seed(7)
+#THIS IS A TEMPORARY EDIT
 
 #########USER-DEFINED VARIABLES#########
 # image_dimensions = [500,500]    #[Width,Height] in pixels
