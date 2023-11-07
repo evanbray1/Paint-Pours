@@ -6,7 +6,6 @@ from scipy.ndimage import gaussian_filter
 import numpy as np
 import time
 import os
-from numba import njit
 import cv2
 plt.close('all')
 start_time = time.time()
@@ -46,15 +45,6 @@ if cmap_name == 'custom':
     ax_cmap.set_title('Your custom colormap')
     ax_cmap.axis('off')
     fig_cmap.tight_layout()
-
-
-
-
-#Define a function for interpolating between two points, which we do a lot here. This is a convenient one because it doesn't have "kinks" at the endpoints like a linear interpolation function would.
-#https://en.wikipedia.org/wiki/Smoothstep
-@njit(parallel=True,fastmath=True)   #Like magic, the @njit bit makes the below function run faster by converting it into machine code.
-def smootherstep_function(x):
-    return 6*x**5-15*x**4+10*x**3
 
 #You should really read the Wikipedia page on Perlin Noise before trying to dissect this function. (https://en.wikipedia.org/wiki/Perlin_noise#Algorithm_detail)
 #Seriously, this part is complicated and took a lot of iterations, linear algebra, and troubleshooting. I would just take it at face value.
