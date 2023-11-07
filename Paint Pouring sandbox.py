@@ -1,12 +1,13 @@
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap,LinearSegmentedColormap
-from scipy.spatial import Voronoi, voronoi_plot_2d
 from scipy.ndimage import gaussian_filter
+from scipy.spatial import Voronoi, voronoi_plot_2d
 #import matplotlib.cm as cm
 import numpy as np
 import time
 import os
 import cv2
+import paint_pour_tools
 plt.close('all')
 start_time = time.time()
 # np.random.seed(7)
@@ -14,19 +15,19 @@ start_time = time.time()
 
 #########USER-DEFINED VARIABLES#########
 # image_dimensions = [500,500]    #[Width,Height] in pixels
-image_dimensions = [1200,800]
-# image_dimensions = [1920,1080]
+# image_dimensions = [1200,800]
+image_dimensions = [1920,1080]
 # image_dimensions = [2000,1600]
 #image_dimensions = [1600,2000]
 # image_dimensions = [3000,2400]
 
-save_image = False                  #Do you want to save a .png copy of your image?
+save_image = True                  #Do you want to save a .png copy of your image?
 num_images = 1                    #How many images do you want to produce?
 make_surface_plot = False           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
 add_cells = True
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-output_directory = '_temp wallpapers/'   #The relative directory where the output images will be saved
+output_directory = '_temp pictures/'   #The relative directory where the output images will be saved
 # output_directory = '8x10s to print/'   #The relative directory where the output images will be saved
 
 ########################################
@@ -46,72 +47,8 @@ if cmap_name == 'custom':
     ax_cmap.axis('off')
     fig_cmap.tight_layout()
 
-
-def make_voronoi(npoints,width,height):
-    x = np.random.uniform(0,width,npoints)
-    y = np.random.uniform(0,height,npoints)
-    points = np.array(list(zip(x,y)))
-    return Voronoi(points)
-
-def voronoi_to_points(voronoi,spacing):
-    ridge_points = np.empty((0, 2), float)
-    for i, ridge in enumerate(voronoi.ridge_vertices):
-        if -1 not in ridge:
-            x0, y0 = voronoi.vertices[ridge[0]]
-            x1, y1 = voronoi.vertices[ridge[1]]
-            dx = x1 - x0
-            dy = y1 - y0
-            length = np.sqrt(dx ** 2 + dy ** 2)
-            # print('Ridge length is: ',round(length,3))
-            N = int(length / spacing)
-            # print('Number of nodes: ',N)
-            if N>0:
-                t = np.linspace(0,1,N+1)
-                x = x0 * (1 - t) + x1 * t
-                y = y0 * (1 - t) + y1 * t
-                ridge_points = np.vstack([ridge_points, np.array([x,y]).T])
-    
-    #Trim down the arrays to only include the unique points (some endpoints get counted twice)
-    #print('Number of points (pre-trimming)',len(ridge_points[:,0]))
-    _,unique_indices = np.unique(ridge_points[:,0],return_index=True)
-    ridge_points = ridge_points[unique_indices]
-    #print('Number of points (post-trimming)',len(ridge_points[:,0]))
-
-    return ridge_points[:, 0], ridge_points[:, 1]
-
-def remove_outer_regions(thresholded_image):
-    image_with_border = cv2.copyMakeBorder(thresholded_image,1,1,1,1,cv2.BORDER_CONSTANT,value=1)
-    flooded_image = cv2.floodFill(image_with_border,None,(0,0),0)[1]
-    h,w = flooded_image.shape
-    trimmed_image = flooded_image[1:h-1,1:w-1]
-    return trimmed_image
-
-def get_contour_pixel_areas(image,list_of_contours):
-    height,width = image.shape
-    areas = []
-    for contour in list_of_contours:
-        temp_image = np.zeros(image.shape,dtype=np.uint8)
-        temp_image = cv2.drawContours(temp_image,[contour],contourIdx=-1,color=1,thickness=-1)
-        contour_area = np.count_nonzero(temp_image)
-        areas.append(contour_area)
-    return np.array(areas)
-
-def remove_small_regions(image,size_threshold):
-    image,contours,hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    contour_areas = get_contour_pixel_areas(image, contours)
-    small_regions = np.where(contour_areas < size_threshold)[0]
-    # small_regions = small_regions[np.where(contour_areas < size_threshold)[0]]
-    
-    #Remove regions that are smaller than some threshold
-    # if len(small_regions > 0):
-    temp_image = np.zeros(image.shape,dtype=np.uint8)
-    for i,region in enumerate(small_regions):
-        temp_image = cv2.drawContours(temp_image,contours,contourIdx=region,color=1,thickness=-1)
-    final_image = cv2.bitwise_xor(temp_image,image)  
-    return final_image
-
 def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,threshold_percentile,minimum_region_area,show_plots=False):
-    vor = make_voronoi(num_voronoi_points,*image_dimensions)
+    vor = paint_pour_tools.make_voronoi(num_voronoi_points,*image_dimensions)
     #num_voronoi_points = number of scatterpoints used to generate the Voronoi diagram. Higher number = more cells, in general
     #gauss_smoothing_sigma = how "round" the corners of the cells are
     #threshold_percentile = thickness of the webbing between cells
@@ -120,7 +57,7 @@ def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,th
     
     # print('Making cell image!')
     #Convert the voronoi diagram ridges into (x,y) points
-    x_new,y_new = voronoi_to_points(vor,1)
+    x_new,y_new = paint_pour_tools.voronoi_to_points(vor,1)
     # print('Done converting into (x,y) points')
     
     #Remove points that fall outside of the region of interest
@@ -163,14 +100,14 @@ def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,th
     # print('Done thresholding')
     
     #Remove the regions that fall over the border
-    image_outer_removed = remove_outer_regions(image_threshold)
+    image_outer_removed = paint_pour_tools.remove_perimeter_regions(image_threshold)
     if show_plots == True:    
         ax2[3].imshow(image_outer_removed,origin='lower')
         ax2[3].set_title('Border regions removed')
     # print('Done removing outer regions')
     
     #Identify regions that are smaller in size than some threshold
-    image_small_removed = remove_small_regions(image_outer_removed, minimum_region_area)
+    image_small_removed = paint_pour_tools.remove_small_regions(image_outer_removed, minimum_region_area)
     if show_plots == True:    
         ax2[4].imshow(image_small_removed,origin='lower')
         ax2[4].set_title('Small regions removed')
@@ -184,7 +121,7 @@ x,y = [np.arange(image_dimensions[0]),np.arange(image_dimensions[1])]
 x,y = np.meshgrid(x,y)
 
 #Some colormaps are just bad looking for this art, IMO. I list them here so I can make sure to avoid them during the random-picking process later.
-bad_cmaps = ['Accent','Paired','Dark2','Set1','Set2','Set3','tab10','tab20','tab20c','tab20b','binary','Pastel1','Pastel2','gist_yarg','gist_gray','brg','CMRmap','gist_ncar','gist_rainbow','hsv','terrain','gnuplot2','nipy_spectral','prism']
+bad_cmaps = ['flag','Accent','Paired','Dark2','Set1','Set2','Set3','tab10','tab20','tab20c','tab20b','binary','Pastel1','Pastel2','gist_yarg','gist_gray','brg','CMRmap','gist_ncar','gist_rainbow','hsv','terrain','gnuplot2','nipy_spectral','prism']
 non_reversed_colormaps = [x for x in plt.colormaps() if '_r' not in x]      #Generate a list of all colormaps that don't contain "_r" in their name, indicating they are just a reversed version of another colormap. "Grays" and "Grays_r" look fundamentally the same for this type of art.
 
 for i in range(num_images):
@@ -195,7 +132,7 @@ for i in range(num_images):
     stretch_value = np.random.randint(-5,6)   #Changes how strongly the contour lines tend to be oriented horizontally vs. vertically. 0 = no preference. 5 = strong preference for horizontal. -5 = strong preference for vertical.
     octave_powers = [1, 0.02, 0.0, 0.0]
     #Actually calculate the Fractal noise image!
-    noise_field, vector_info = fractal_noise(image_dimensions, octave_powers,stretch_value)
+    noise_field, vector_info = paint_pour_tools.fractal_noise(image_dimensions, octave_powers,stretch_value)
     
     #Normalize the image to the range [0,1]
     noise_field = (noise_field-np.min(noise_field))/(np.max(noise_field)-np.min(noise_field))    
@@ -222,7 +159,7 @@ for i in range(num_images):
         # plt.imshow(cell_field)
         #############PICK UP HERE****
         
-    noise_field += cell_field
+        noise_field += cell_field
     
     #Pick the number of levels in your contour map, and the Z-values they correspond to
     num_levels = np.random.choice([7,10,13,17,20,25,30,40,50])
@@ -234,7 +171,7 @@ for i in range(num_images):
         cmap = cmap_custom
     else:
         if cmap_name == 'any':
-            cmap_name_temp = np.random.choice(non_reversed_colormaps)
+            cmap_name_temp = str(np.random.choice(non_reversed_colormaps))
         else:
             cmap_name_temp = cmap_name
         cmap = plt.cm.get_cmap(cmap_name_temp)    #Retrieve the colormap
