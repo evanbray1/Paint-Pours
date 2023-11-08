@@ -31,76 +31,6 @@ output_directory = 'Pictures/_test/'   #The relative directory where the output 
 
 ########################################
 
-def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,threshold_percentile,minimum_region_area,show_plots=False):
-    #num_voronoi_points = number of scatterpoints used to generate the Voronoi diagram. Higher number = more cells, in general
-    #gauss_smoothing_sigma = In pixels, how "round" the corners of the cells are
-    #threshold_percentile = thickness of the webbing between cells
-    #minimum_region_area = any cells with an area smaller than this (in pixels) will be removed
-    vor = paint_pour_tools.make_voronoi(num_voronoi_points,*image_dimensions)
-
-    
-    
-    # print('Making cell image!')
-    #Convert the voronoi diagram ridges into (x,y) points
-    x_new,y_new = paint_pour_tools.voronoi_to_points(vor,1)
-    # print('Done converting into (x,y) points')
-    
-    #Remove points that fall outside of the region of interest
-    good_indices = np.where((x_new > 0) & (x_new < image_dimensions[0]) & (y_new > 0) & (y_new < image_dimensions[1]))[0]
-    x_new = x_new[good_indices]
-    y_new = y_new[good_indices]
-
-    if show_plots == True:
-        fig,ax = plt.subplots(figsize=(8,6))
-        fig = voronoi_plot_2d(vor,ax=ax,show_vertices=False)
-        ax.set_xlim(0,image_dimensions[0])
-        ax.set_ylim(0,image_dimensions[1])
-        ax.set_aspect('equal')
-        ax.scatter(x_new,y_new,s=20)
-        fig.tight_layout()
-    
-    #Take the (x,y) points and histogram them.
-    image = np.histogram2d(x_new,y_new,bins=image_dimensions,range=[[0,image_dimensions[0]],[0,image_dimensions[1]]])[0].T
-    if show_plots == True:
-        fig2,ax2 = plt.subplots(1,5,figsize=(18,5),sharey=True)
-        ax2[0].imshow(image,origin='lower')
-        ax2[0].set_title('Original Voronoi')
-    # print('Done histgramming')
-
-    #Apply some gaussian smoothing to the image
-    image_proc = np.log10(image+.0001)
-    image_proc = gaussian_filter(image_proc,gauss_smoothing_sigma)
-    if show_plots == True:
-        ax2[1].imshow(image_proc,origin='lower')
-        ax2[1].set_title('imagemed + smoothed')
-        ax2[1].set_aspect('equal')
-    
-    #Threshold the image
-    image_threshold = np.zeros(image_proc.shape,dtype=np.uint8)
-    image_threshold[image_proc < np.percentile(image_proc,threshold_percentile)] = 1
-    if show_plots == True:    
-        ax2[2].imshow(image_threshold,origin='lower')
-        ax2[2].set_title('Threshold applied')
-        ax2[2].set_aspect('equal')
-    # print('Done thresholding')
-    
-    #Remove the regions that fall over the border
-    image_outer_removed = paint_pour_tools.remove_perimeter_regions(image_threshold)
-    if show_plots == True:    
-        ax2[3].imshow(image_outer_removed,origin='lower')
-        ax2[3].set_title('Border regions removed')
-    # print('Done removing outer regions')
-    
-    #Identify regions that are smaller in size than some threshold
-    image_small_removed = paint_pour_tools.remove_small_regions(image_outer_removed, minimum_region_area)
-    if show_plots == True:    
-        ax2[4].imshow(image_small_removed,origin='lower')
-        ax2[4].set_title('Small regions removed')
-        fig2.tight_layout()
-    # print('Done removing small regions')
-
-    return image_small_removed
-
 #Define a grid of (x,y) coordinates to represent the pixel locations in the image. Necessary for making a contour plot later.
 x,y = [np.arange(image_dimensions[0]),np.arange(image_dimensions[1])]
 x,y = np.meshgrid(x,y)
@@ -134,7 +64,7 @@ for i in range(num_images):
     
         # cell_field *= 0.2*cell_weight_array
         # cell_field = np.random.uniform(0.1,0.5)*make_cell_image(image_dimensions, 200, 15, 70, 10)
-        cell_field = 0.5*make_cell_image(image_dimensions, num_voronoi_points=200, gauss_smoothing_sigma=15, threshold_percentile=70, 
+        cell_field = 0.5*paint_pour_tools.make_cell_image(image_dimensions, num_voronoi_points=200, gauss_smoothing_sigma=15, threshold_percentile=70, 
                                          minimum_region_area=10,show_plots=False)
 
         # plt.imshow(cell_field)
