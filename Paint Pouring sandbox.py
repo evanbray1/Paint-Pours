@@ -14,8 +14,8 @@ start_time = time.time()
 
 #########USER-DEFINED VARIABLES#########
 # image_dimensions = [500,500]    #[Width,Height] in pixels
-image_dimensions = [1200,800]
-# image_dimensions = [2*1920,2*1080]
+# image_dimensions = [1200,800]
+image_dimensions = [1*1920,1*1080]
 # image_dimensions = [2000,1600]
 #image_dimensions = [1600,2000]
 # image_dimensions = [3000,2400]
@@ -26,32 +26,18 @@ make_surface_plot = False           #Helpful for diagnostic purposes in case you
 add_cells = True
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-output_directory = '_test/'   #The relative directory where the output images will be saved
+output_directory = 'Pictures/_test/'   #The relative directory where the output images will be saved
 # output_directory = '8x10s to print/'   #The relative directory where the output images will be saved
 
 ########################################
 
-
-#Want to make a custom colormap? Do it here.
-if cmap_name == 'custom':
-    colors=['#33192F','#803D75','#CF2808','#FEE16E','#6AA886','#5CE5FB','#1A1941']
-    nodes = np.linspace(0,1.0,len(colors))
-    # nodes = np.concatenate((np.linspace(0,0.6,len(colors)-1),np.array([1.0])))
-    cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes, colors)))
-    
-    plt.close('all')
-    fig_cmap,ax_cmap = plt.subplots(figsize=(8,2))
-    ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap_custom,origin='lower')
-    ax_cmap.set_title('Your custom colormap')
-    ax_cmap.axis('off')
-    fig_cmap.tight_layout()
-
 def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,threshold_percentile,minimum_region_area,show_plots=False):
-    vor = paint_pour_tools.make_voronoi(num_voronoi_points,*image_dimensions)
     #num_voronoi_points = number of scatterpoints used to generate the Voronoi diagram. Higher number = more cells, in general
-    #gauss_smoothing_sigma = how "round" the corners of the cells are
+    #gauss_smoothing_sigma = In pixels, how "round" the corners of the cells are
     #threshold_percentile = thickness of the webbing between cells
     #minimum_region_area = any cells with an area smaller than this (in pixels) will be removed
+    vor = paint_pour_tools.make_voronoi(num_voronoi_points,*image_dimensions)
+
     
     
     # print('Making cell image!')
@@ -149,7 +135,7 @@ for i in range(num_images):
         # cell_field *= 0.2*cell_weight_array
         # cell_field = np.random.uniform(0.1,0.5)*make_cell_image(image_dimensions, 200, 15, 70, 10)
         cell_field = 0.5*make_cell_image(image_dimensions, num_voronoi_points=200, gauss_smoothing_sigma=15, threshold_percentile=70, 
-                                         minimum_region_area=10)
+                                         minimum_region_area=10,show_plots=False)
 
         # plt.imshow(cell_field)
         #############PICK UP HERE****
@@ -162,20 +148,20 @@ for i in range(num_images):
     
     #Pick the colormap to be used for this image and record its name
     if cmap_name == 'custom':
-        cmap = cmap_custom
+        cmap = paint_pour_tools.make_custom_colormap(colors=['#33192F','#803D75','#CF2808','#FEE16E','#6AA886','#5CE5FB','#1A1941'],show_plot=True)
     elif cmap_name == 'any':
         cmap = paint_pour_tools.pick_random_colormap()
             
-    colors = np.random.randint(low=0,high=256,size=num_levels)  #Pick "num_levels" random colors from the chosen colormap. 
-    cmap = ListedColormap([cmap(i) for i in colors],name=cmap.name)    #Re-make the colormap using our chosen colors
+    # colors = np.random.randint(low=0,high=256,size=num_levels)  #Pick "num_levels" random colors from the chosen colormap. 
+    # cmap = ListedColormap([cmap(i) for i in colors],name=cmap.name)    #Re-make the colormap using our chosen colors
     
     #TEMPORARY PLOTTING STUFF
-    fig,ax = plt.subplots(1,figsize=(image_dimensions[0]/120, image_dimensions[1]/120))# ax = plt.Axes(fig, [0., 0., 1., 1.])           #make it so the plot takes up the ENTIRE figure
-    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    fig,ax = plt.subplots(1,figsize=(image_dimensions[0]/120, image_dimensions[1]/120))
+    ax = plt.Axes(fig, [0., 0., 1., 1.])           #make it so the plot takes up the ENTIRE figure
     fig.add_axes(ax)
     ax.set_xlim(0,image_dimensions[0])     #Set the x- and y-bounds of the plotting area.
     ax.set_ylim(0,image_dimensions[1])
-    ax.imshow(noise_field,cmap=cmap.name)
+    ax.imshow(noise_field,cmap=cmap)
     fig.tight_layout()
     # os.sys.exit()
     

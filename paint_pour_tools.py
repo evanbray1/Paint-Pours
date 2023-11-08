@@ -3,6 +3,8 @@ import numpy as np
 from scipy.spatial import Voronoi, voronoi_plot_2d
 import cv2
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap,LinearSegmentedColormap
+
 
 #Define a function for interpolating between two points, which we do a lot here. This is a convenient one because it doesn't have "kinks" at the endpoints like a linear interpolation function would.
 #https://en.wikipedia.org/wiki/Smoothstep
@@ -236,3 +238,25 @@ def pick_random_colormap(print_choice=False):
     if print_choice==True:
         print('Chosen colormap: ',cmap.name)
     return cmap
+
+def make_custom_colormap(colors=None,nodes=None,show_plot=False):
+    #Colors = a list of hex codes for colors you want your colormap to be composed of
+    #Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
+    #       -The first and last value must be 0 and 1, respectively.
+    #       -For example, if nodes = [0,0.5,1], your colormap will start at color[0], hit color[1] at the middle value, and reach color[2] at the max value
+    if colors == None:
+        print('WARNING: No input colors specified. Picking some default values....')
+        colors=['#33192F','#803D75','#CF2808','#FEE16E','#6AA886','#5CE5FB','#1A1941']
+    if nodes == None:
+        print('WARNING: No input nodes specified. Picking an evenly-spaced array....')
+        nodes = np.linspace(0,1.0,len(colors))  
+    # nodes = np.concatenate((np.linspace(0,0.6,len(colors)-1),np.array([1.0])))
+    cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes, colors)))
+    
+    if show_plot == True:
+        fig_cmap,ax_cmap = plt.subplots(figsize=(8,2))
+        ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap_custom,origin='lower')
+        ax_cmap.set_title('Your custom colormap')
+        ax_cmap.axis('off')
+        fig_cmap.tight_layout()
+    return cmap_custom
