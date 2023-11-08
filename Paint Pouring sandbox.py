@@ -11,12 +11,11 @@ import paint_pour_tools
 plt.close('all')
 start_time = time.time()
 # np.random.seed(7)
-#THIS IS A TEMPORARY EDIT
 
 #########USER-DEFINED VARIABLES#########
 # image_dimensions = [500,500]    #[Width,Height] in pixels
 # image_dimensions = [1200,800]
-image_dimensions = [1920,1080]
+image_dimensions = [2*1920,2*1080]
 # image_dimensions = [2000,1600]
 #image_dimensions = [1600,2000]
 # image_dimensions = [3000,2400]
@@ -27,7 +26,7 @@ make_surface_plot = False           #Helpful for diagnostic purposes in case you
 add_cells = True
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-output_directory = '_temp pictures/'   #The relative directory where the output images will be saved
+output_directory = '4K wallpapers/'   #The relative directory where the output images will be saved
 # output_directory = '8x10s to print/'   #The relative directory where the output images will be saved
 
 ########################################
@@ -119,11 +118,7 @@ def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,th
 #Define a grid of (x,y) coordinates to represent the pixel locations in the image. Necessary for making a contour plot later.
 x,y = [np.arange(image_dimensions[0]),np.arange(image_dimensions[1])]
 x,y = np.meshgrid(x,y)
-
-#Some colormaps are just bad looking for this art, IMO. I list them here so I can make sure to avoid them during the random-picking process later.
-bad_cmaps = ['flag','Accent','Paired','Dark2','Set1','Set2','Set3','tab10','tab20','tab20c','tab20b','binary','Pastel1','Pastel2','gist_yarg','gist_gray','brg','CMRmap','gist_ncar','gist_rainbow','hsv','terrain','gnuplot2','nipy_spectral','prism']
-non_reversed_colormaps = [x for x in plt.colormaps() if '_r' not in x]      #Generate a list of all colormaps that don't contain "_r" in their name, indicating they are just a reversed version of another colormap. "Grays" and "Grays_r" look fundamentally the same for this type of art.
-
+    
 for i in range(num_images):
     print('Currently making image ',i+1,' of ',num_images)
     plt.close('all')
@@ -167,23 +162,12 @@ for i in range(num_images):
     
     #Pick the colormap to be used for this image and record its name
     if cmap_name == 'custom':
-        cmap_name_temp = cmap_custom.name
         cmap = cmap_custom
-    else:
-        if cmap_name == 'any':
-            cmap_name_temp = str(np.random.choice(non_reversed_colormaps))
-        else:
-            cmap_name_temp = cmap_name
-        cmap = plt.cm.get_cmap(cmap_name_temp)    #Retrieve the colormap
-
-    #Re-pick the colormap if it randomly chose a Certified Ugly (TM) one the first time. Keep picking new colormaps until it picks one that isn't ugly.
-    if (cmap_name not in bad_cmaps) & (cmap_name != 'custom'):
-        while any(cmap.name in s for s in bad_cmaps):
-            print('Randomly chose an ugly colormap! Choosing again...')
-            cmap = plt.cm.get_cmap(np.random.choice(non_reversed_colormaps))
+    elif cmap_name == 'any':
+        cmap = paint_pour_tools.pick_random_colormap()
             
     colors = np.random.randint(low=0,high=256,size=num_levels)  #Pick "num_levels" random colors from the chosen colormap. 
-    cmap = ListedColormap([cmap(i) for i in colors])    #Re-make the colormap using our chosen colors
+    cmap = ListedColormap([cmap(i) for i in colors],name=cmap.name)    #Re-make the colormap using our chosen colors
     
     #TEMPORARY PLOTTING STUFF
     fig,ax = plt.subplots(1,figsize=(image_dimensions[0]/120, image_dimensions[1]/120))# ax = plt.Axes(fig, [0., 0., 1., 1.])           #make it so the plot takes up the ENTIRE figure
@@ -191,7 +175,7 @@ for i in range(num_images):
     fig.add_axes(ax)
     ax.set_xlim(0,image_dimensions[0])     #Set the x- and y-bounds of the plotting area.
     ax.set_ylim(0,image_dimensions[1])
-    ax.imshow(noise_field,cmap=cmap_name_temp)
+    ax.imshow(noise_field,cmap=cmap.name)
     fig.tight_layout()
     # os.sys.exit()
     
@@ -209,11 +193,11 @@ for i in range(num_images):
     
     if save_image == True:
         if cmap_name == 'any':    #Change the filename depending on whether you opted to use a random colormap or not.
-            filename = cmap_name_temp+'_'+str(num_levels)+'levels_'+'_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]])+'_stretch'+str(stretch_value)+\
+            filename = cmap.name+'_'+str(num_levels)+'levels_'+'_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]])+'_stretch'+str(stretch_value)+\
                 '.png'
         else:
             filename = str(num_levels)+'levels_'+'_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]])+'_stretch'+str(stretch_value)+\
-                '_'+cmap_name_temp+'.png'
+                '_'+cmap.name+'.png'
                     
         #Save the images in the desired output_directory
         output_directory_temp = output_directory#+cmap_name_temp+'/'

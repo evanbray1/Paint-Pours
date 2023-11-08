@@ -2,7 +2,7 @@ from numba import njit
 import numpy as np
 from scipy.spatial import Voronoi, voronoi_plot_2d
 import cv2
-
+import matplotlib.pyplot as plt
 
 #Define a function for interpolating between two points, which we do a lot here. This is a convenient one because it doesn't have "kinks" at the endpoints like a linear interpolation function would.
 #https://en.wikipedia.org/wiki/Smoothstep
@@ -220,3 +220,19 @@ def remove_small_regions(image,size_threshold):
         temp_image = cv2.drawContours(temp_image,contours,contourIdx=region,color=1,thickness=-1)
     final_image = cv2.bitwise_xor(temp_image,image)  
     return final_image
+
+def pick_random_colormap(print_choice=False):
+    #Some colormaps are just bad looking for this art, IMO. I list them here so I can make sure to avoid them during the random-picking process later.
+    bad_cmaps = ['flag','Accent','gist_stern','Paired','Dark2','Set1','Set2','Set3','tab10','tab20','tab20c','tab20b','binary','Pastel1','Pastel2','gist_yarg','gist_gray','brg','CMRmap','gist_ncar','gist_rainbow','hsv','terrain','gnuplot2','nipy_spectral','prism']
+    non_reversed_colormaps = [x for x in plt.colormaps() if '_r' not in x]      #Generate a list of all colormaps that don't contain "_r" in their name, indicating they are just a reversed version of another colormap. "Grays" and "Grays_r" look fundamentally the same for this type of art.
+
+    #Pick a random colormap
+    cmap = plt.cm.get_cmap(np.random.choice(non_reversed_colormaps))
+
+    #Re-pick the colormap if it randomly chose a Certified Ugly (TM) one the first time. Keep picking new colormaps until it picks one that isn't ugly.
+    while any(cmap.name in s for s in bad_cmaps):
+        # print('Randomly chose an ugly colormap! Choosing again...')
+        cmap = plt.cm.get_cmap(np.random.choice(non_reversed_colormaps))
+    if print_choice==True:
+        print('Chosen colormap: ',cmap.name)
+    return cmap
