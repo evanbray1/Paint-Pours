@@ -21,7 +21,7 @@ image_dimensions = [2*1920,2*1080]
 # image_dimensions = [3000,2400]
 
 save_image = True                  #Do you want to save a .png copy of your image?
-num_images = 1                    #How many images do you want to produce?
+num_images = 30                    #How many images do you want to produce?
 make_surface_plot = False           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
 add_cells = True
 
@@ -83,7 +83,9 @@ for i in range(num_images):
     my_dpi=120      #Don't fuck with this. Idk why but 120 always works, regardless of monitor.
     
     if save_image == True:
-        filename = cmap.name+'_'+str(num_levels)+'levels_'+'_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]])+'_stretch'+str(stretch_value)+\
+        # filename = cmap.name+'_'+str(num_levels)+'levels_'+'_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]])+'_stretch'+str(stretch_value)+\
+        #     '_gausssmooth'+str(gauss_smoothing_sigma)+'_threshold'+str(threshold_percentile)+'.png'
+        filename = cmap.name+'_'+'_stretch'+str(stretch_value)+\
             '_gausssmooth'+str(gauss_smoothing_sigma)+'_threshold'+str(threshold_percentile)+'.png'
                     
         #Save the images in the desired output_directory
