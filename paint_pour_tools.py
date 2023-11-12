@@ -261,10 +261,11 @@ def make_custom_colormap(colors=None,nodes=None,show_plot=False):
         fig_cmap.tight_layout()
     return cmap_custom
 
-def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,threshold_percentile,minimum_region_area,show_plots=False):
+def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,threshold_percentile,minimum_region_area,
+                    show_plots=False,include_perimeter_regions=False):
     #num_voronoi_points = number of scatterpoints used to generate the Voronoi diagram. Higher number = more cells, in general
     #gauss_smoothing_sigma = In pixels, how "round" the corners of the cells are
-    #threshold_percentile = thickness of the webbing between cells
+    #threshold_percentile = thickness of the webbing between cells. Low number = thicker webbing
     #minimum_region_area = any cells with an area smaller than this (in pixels) will be removed
     vor = make_voronoi(num_voronoi_points,*image_dimensions)
 
@@ -312,19 +313,22 @@ def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,th
         ax2[2].set_aspect('equal')
     # print('Done thresholding')
     
-    #Remove the regions that fall over the border
-    image_outer_removed = remove_perimeter_regions(image_threshold)
-    if show_plots == True:    
-        ax2[3].imshow(image_outer_removed,origin='lower')
-        ax2[3].set_title('Border regions removed')
-    # print('Done removing outer regions')
-    
+    if include_perimeter_regions == False:
+        #Remove the regions that fall over the border
+        image_final = remove_perimeter_regions(image_threshold)
+        if show_plots == True:    
+            ax2[3].imshow(image_final,origin='lower')
+            ax2[3].set_title('Border regions removed')
+        # print('Done removing outer regions')
+    else:
+        image_final = image_threshold.copy()
+        
     #Identify regions that are smaller in size than some threshold
-    image_small_removed = remove_small_regions(image_outer_removed, minimum_region_area)
+    image_final = remove_small_regions(image_final, minimum_region_area)
     if show_plots == True:    
-        ax2[4].imshow(image_small_removed,origin='lower')
+        ax2[4].imshow(image_final,origin='lower')
         ax2[4].set_title('Small regions removed')
         fig2.tight_layout()
     # print('Done removing small regions')
 
-    return image_small_removed
+    return image_final
