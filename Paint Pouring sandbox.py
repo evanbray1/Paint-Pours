@@ -21,12 +21,12 @@ image_dimensions = [2*1920,2*1080]
 # image_dimensions = [3000,2400]
 
 save_image = True                  #Do you want to save a .png copy of your image?
-num_images = 30                    #How many images do you want to produce?
+num_images = 1                    #How many images do you want to produce?
 make_surface_plot = False           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
 add_cells = True
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-output_directory = 'Pictures/4K Wallpapers/'   #The relative directory where the output images will be saved
+output_directory = 'Pictures/4K Wallpapers (cells)/'   #The relative directory where the output images will be saved
 # output_directory = '8x10s to print/'   #The relative directory where the output images will be saved
 
 ########################################
