@@ -70,17 +70,15 @@ for i in range(num_images):
     # colors = np.random.randint(low=0,high=256,size=num_levels)  #Pick "num_levels" random colors from the chosen colormap. 
     # cmap = ListedColormap([cmap(i) for i in colors],name=cmap.name)    #Re-make the colormap using our chosen colors
     
-    #TEMPORARY PLOTTING STUFF
+    #Plotting time
     fig,ax = plt.subplots(1,figsize=(image_dimensions[0]/120, image_dimensions[1]/120))
     ax = plt.Axes(fig, [0., 0., 1., 1.])           #make it so the plot takes up the ENTIRE figure
     fig.add_axes(ax)
+    contour = ax.contourf(x,y,noise_field,cmap=cmap,levels=levels,extend='both')
     ax.set_xlim(0,image_dimensions[0])     #Set the x- and y-bounds of the plotting area.
     ax.set_ylim(0,image_dimensions[1])
-    ax.imshow(noise_field,cmap=cmap)
+    # ax.imshow(noise_field,cmap=cmap)
     fig.tight_layout()
-    # os.sys.exit()
-    
-    my_dpi=120      #Don't fuck with this. Idk why but 120 always works, regardless of monitor.
     
     if save_image == True:
         filename = cmap.name+'_'+str(num_levels)+'levels_'+'_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]])+'_stretch'+str(stretch_value)+\
@@ -90,7 +88,7 @@ for i in range(num_images):
         output_directory_temp = output_directory#+cmap_name_temp+'/'
         if os.path.exists(output_directory_temp) == False:    #Does the specified directory already exist?
             os.makedirs(output_directory_temp)                    #Create the directory if necessary.
-        fig.savefig(output_directory_temp+filename,dpi=my_dpi)    #save the displayed image
+        fig.savefig(output_directory_temp+filename,dpi=120)    #save the displayed image
 
     
     #Sometimes it can be helpful to view the image as an interactable surface plot instead of a contour plot.
@@ -99,14 +97,6 @@ for i in range(num_images):
         fig1, ax1 = plt.subplots(figsize=(8,6),subplot_kw={"projection": "3d"})
         surf = ax1.plot_surface(x,y,noise_field, cmap=cmap,linewidth=0, antialiased=False,rcount=50,ccount=50)
         fig1.tight_layout()
-
-#Diagnostic stuff for troubleshooting colormaps
-# cmap = plt.cm.get_cmap('viridis')
-# x = np.linspace(0,256,1000)
-# x = np.arange(256)
-# y = np.zeros(len(x))
-# color = cmap(x)
-# plt.scatter(x,y,c=[cmap(i) for i in x])
 
 end_time=time.time()
 elapsed_time = round(end_time - start_time,2)   #calculate the amount of time that has elapsed since program start, and print it
