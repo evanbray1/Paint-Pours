@@ -15,18 +15,18 @@ start_time = time.time()
 #########USER-DEFINED VARIABLES#########
 # image_dimensions = [500,500]    #[Width,Height] in pixels
 # image_dimensions = [1200,800]
-image_dimensions = [2*1920,2*1080]
+image_dimensions = [1*1920,1*1080]
 # image_dimensions = [2000,1600]
 #image_dimensions = [1600,2000]
 # image_dimensions = [3000,2400]
 
-save_image = True                  #Do you want to save a .png copy of your image?
+save_image = False                 #Do you want to save a .png copy of your image?
 num_images = 1                    #How many images do you want to produce?
 make_surface_plot = False           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
-add_cells = True
+add_cells = False
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-output_directory = 'Pictures/4K Wallpapers (cells)/'   #The relative directory where the output images will be saved
+output_directory = 'Pictures/_test/'   #The relative directory where the output images will be saved
 # output_directory = '8x10s to print/'   #The relative directory where the output images will be saved
 
 ########################################
@@ -83,9 +83,7 @@ for i in range(num_images):
     my_dpi=120      #Don't fuck with this. Idk why but 120 always works, regardless of monitor.
     
     if save_image == True:
-        # filename = cmap.name+'_'+str(num_levels)+'levels_'+'_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]])+'_stretch'+str(stretch_value)+\
-        #     '_gausssmooth'+str(gauss_smoothing_sigma)+'_threshold'+str(threshold_percentile)+'.png'
-        filename = cmap.name+'_'+'_stretch'+str(stretch_value)+\
+        filename = cmap.name+'_'+str(num_levels)+'levels_'+'_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]])+'_stretch'+str(stretch_value)+\
             '_gausssmooth'+str(gauss_smoothing_sigma)+'_threshold'+str(threshold_percentile)+'.png'
                     
         #Save the images in the desired output_directory
