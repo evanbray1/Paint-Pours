@@ -15,8 +15,8 @@ start_time = time.time()
 #########USER-DEFINED VARIABLES#########
 # image_dimensions = [500,500]    #[Width,Height] in pixels
 # image_dimensions = [1200,800]
-# image_dimensions = [2*1920,2*1080]
-image_dimensions = [1920,1080]
+image_dimensions = [2*1920,2*1080]
+# image_dimensions = [1920,1080]
 #image_dimensions = [1600,2000]
 # image_dimensions = [3000,2400]
 
@@ -26,7 +26,7 @@ make_surface_plot = False           #Helpful for diagnostic purposes in case you
 add_cells = True
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-output_directory = 'C:/Users/jkemb/My Drive/Python Projects/Paint Pouring/Pictures/1080p wallpapers (cells only)/'   #The relative directory where the output images will be saved
+output_directory = 'C:/Users/jkemb/My Drive/Python Projects/Paint Pouring/Pictures/_temp/'   #The relative directory where the output images will be saved
 # output_directory = '8x10s to print/'   #The relative directory where the output images will be saved
 
 ########################################
