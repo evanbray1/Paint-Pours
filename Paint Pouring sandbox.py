@@ -15,18 +15,18 @@ start_time = time.time()
 #########USER-DEFINED VARIABLES#########
 # image_dimensions = [500,500]    #[Width,Height] in pixels
 # image_dimensions = [1200,800]
-image_dimensions = [2*1920,2*1080]
-# image_dimensions = [2000,1600]
+# image_dimensions = [2*1920,2*1080]
+image_dimensions = [1920,1080]
 #image_dimensions = [1600,2000]
 # image_dimensions = [3000,2400]
 
 save_image = True                  #Do you want to save a .png copy of your image?
-num_images = 1                    #How many images do you want to produce?
+num_images = 10                    #How many images do you want to produce?
 make_surface_plot = False           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
 add_cells = True
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-output_directory = 'Pictures/4K Wallpapers (cells)/'   #The relative directory where the output images will be saved
+output_directory = 'C:/Users/jkemb/My Drive/Python Projects/Paint Pouring/Pictures/1080p wallpapers (cells only)/'   #The relative directory where the output images will be saved
 # output_directory = '8x10s to print/'   #The relative directory where the output images will be saved
 
 ########################################
@@ -52,7 +52,7 @@ for i in range(num_images):
         include_perimeter_regions = np.random.choice([True,False])
         gauss_smoothing_sigma = np.random.choice([5,15,25])
         threshold_percentile = np.random.choice([60,70,80])
-        cell_field = 0.5*paint_pour_tools.make_cell_image(image_dimensions, num_voronoi_points=200, gauss_smoothing_sigma=gauss_smoothing_sigma, threshold_percentile=threshold_percentile, 
+        cell_field = 0.5*paint_pour_tools.make_cell_image(image_dimensions, num_voronoi_points=150, gauss_smoothing_sigma=gauss_smoothing_sigma, threshold_percentile=threshold_percentile, 
                                          minimum_region_area=20,show_plots=False,include_perimeter_regions=include_perimeter_regions)
         
         noise_field += cell_field
@@ -71,6 +71,8 @@ for i in range(num_images):
     # cmap = ListedColormap([cmap(i) for i in colors],name=cmap.name)    #Re-make the colormap using our chosen colors
     
     #TEMPORARY PLOTTING STUFF
+    if save_image == True:
+        plt.ioff()
     fig,ax = plt.subplots(1,figsize=(image_dimensions[0]/120, image_dimensions[1]/120))
     ax = plt.Axes(fig, [0., 0., 1., 1.])           #make it so the plot takes up the ENTIRE figure
     fig.add_axes(ax)
@@ -78,6 +80,8 @@ for i in range(num_images):
     ax.set_ylim(0,image_dimensions[1])
     ax.imshow(noise_field,cmap=cmap)
     fig.tight_layout()
+    if save_image == True:
+        plt.ion()
     # os.sys.exit()
     
     my_dpi=120      #Don't fuck with this. Idk why but 120 always works, regardless of monitor.
