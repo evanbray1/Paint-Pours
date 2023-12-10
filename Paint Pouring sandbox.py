@@ -20,6 +20,7 @@ image_dimensions = [2*1920,2*1080]
 #image_dimensions = [1600,2000]
 # image_dimensions = [3000,2400]
 
+display_image = True               #Do you want to display the image on the screen? NOTE, automatically set to false when image_dimensions > [1920,1080], otherwise there's some rendering problems.
 save_image = True                  #Do you want to save a .png copy of your image?
 num_images = 10                    #How many images do you want to produce?
 make_surface_plot = False           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
@@ -71,18 +72,20 @@ for i in range(num_images):
     # cmap = ListedColormap([cmap(i) for i in colors],name=cmap.name)    #Re-make the colormap using our chosen colors
     
     #TEMPORARY PLOTTING STUFF
-    if save_image == True:
-        plt.ioff()
-    fig,ax = plt.subplots(1,figsize=(image_dimensions[0]/120, image_dimensions[1]/120))
-    ax = plt.Axes(fig, [0., 0., 1., 1.])           #make it so the plot takes up the ENTIRE figure
-    fig.add_axes(ax)
-    ax.set_xlim(0,image_dimensions[0])     #Set the x- and y-bounds of the plotting area.
-    ax.set_ylim(0,image_dimensions[1])
-    ax.imshow(noise_field,cmap=cmap)
-    fig.tight_layout()
-    if save_image == True:
-        plt.ion()
-    # os.sys.exit()
+    if display_image == True:
+        #Temporarily disable displaying the image if the image is larger than the screen, otherwise we'll get weird graphical bugs
+        if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080): 
+            plt.ioff()
+        fig,ax = plt.subplots(1,figsize=(image_dimensions[0]/120, image_dimensions[1]/120))
+        ax = plt.Axes(fig, [0., 0., 1., 1.])           #make it so the plot takes up the ENTIRE figure
+        fig.add_axes(ax)
+        # contour = ax.contourf(x,y,noise_field,cmap=cmap,levels=levels,extend='both')
+        # ax.set_xlim(0,image_dimensions[0])     #Set the x- and y-bounds of the plotting area.
+        # ax.set_ylim(0,image_dimensions[1])
+        ax.imshow(noise_field,cmap=cmap)
+        # fig.tight_layout()
+        if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):    #Re-enable interactive mode, in case it was turned off earlier.
+            plt.ion()
     
     my_dpi=120      #Don't fuck with this. Idk why but 120 always works, regardless of monitor.
     
