@@ -23,27 +23,20 @@ image_dimensions = [1*1920,1*1080]
 # image_dimensions = [2000,2000]
 # image_dimensions = [3000,2400]
 
-<<<<<<< Updated upstream
-=======
 display_image = True               #Do you want to display the image on the screen? NOTE, automatically set to false when image_dimensions > [1920,1080], otherwise there's some rendering problems.
->>>>>>> Stashed changes
 save_image = False                 #Do you want to save a .png copy of your image?
 num_images = 1                    #How many images do you want to produce?
 show_intermediate_plots = True  #Do you want to show some intermediate results to help with troubleshooting?
 make_surface_plot = False           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
-<<<<<<< Updated upstream
 add_cells = False
-
-cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-output_directory = 'Pictures/_test/'   #The relative directory where the output images will be saved
-=======
-add_cells = True                #Do you want to add cells to your image?
 display_colormap = True         #Do you want to display your chosen colormap in a separate window?
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
+output_directory = 'Pictures/_test/'   #The relative directory where the output images will be saved
+
+
+cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 output_directory = 'C:/Users/jkemb/My Drive/Python Projects/Paint Pouring/Pictures/_temp/'   #The relative directory where the output images will be saved
->>>>>>> Stashed changes
-# output_directory = '8x10s to print/'   #The relative directory where the output images will be saved
 
 ########################################
 
@@ -158,17 +151,6 @@ for i in range(num_images):
     # colors = np.random.randint(low=0,high=256,size=num_levels)  #Pick "num_levels" random colors from the chosen colormap. 
     # cmap = ListedColormap([cmap(i) for i in colors],name=cmap.name)    #Re-make the colormap using our chosen colors
     
-<<<<<<< Updated upstream
-    #Plotting time
-    fig,ax = plt.subplots(1,figsize=(image_dimensions[0]/120, image_dimensions[1]/120))
-    ax = plt.Axes(fig, [0., 0., 1., 1.])           #make it so the plot takes up the ENTIRE figure
-    fig.add_axes(ax)
-    contour = ax.contourf(x,y,noise_field,cmap=cmap,levels=levels,extend='both')
-    ax.set_xlim(0,image_dimensions[0])     #Set the x- and y-bounds of the plotting area.
-    ax.set_ylim(0,image_dimensions[1])
-    # ax.imshow(noise_field,cmap=cmap)
-    fig.tight_layout()
-=======
     if display_colormap == True:
         fig_cmap,ax_cmap = plt.subplots(figsize=(8,2))
         ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap,origin='lower')
@@ -191,7 +173,6 @@ for i in range(num_images):
         # fig.tight_layout()
         if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):    #Re-enable interactive mode, in case it was turned off earlier.
             plt.ion()
->>>>>>> Stashed changes
     
     if save_image == True:
         filename = cmap.name+'_'+str(num_levels)+'levels_'+'_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]])+'_stretch'+str(stretch_value)+\
