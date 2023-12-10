@@ -12,21 +12,37 @@ plt.close('all')
 start_time = time.time()
 # np.random.seed(7)
 
+#To-do, pick a more optimum set of gauss_smoothing and threshold parameters. 
+#Refer to images saved in Pictures folder.
+
 #########USER-DEFINED VARIABLES#########
 # image_dimensions = [500,500]    #[Width,Height] in pixels
 # image_dimensions = [1200,800]
 image_dimensions = [1*1920,1*1080]
 # image_dimensions = [2000,1600]
-#image_dimensions = [1600,2000]
+# image_dimensions = [2000,2000]
 # image_dimensions = [3000,2400]
 
+<<<<<<< Updated upstream
+=======
+display_image = True               #Do you want to display the image on the screen? NOTE, automatically set to false when image_dimensions > [1920,1080], otherwise there's some rendering problems.
+>>>>>>> Stashed changes
 save_image = False                 #Do you want to save a .png copy of your image?
 num_images = 1                    #How many images do you want to produce?
+show_intermediate_plots = True  #Do you want to show some intermediate results to help with troubleshooting?
 make_surface_plot = False           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
+<<<<<<< Updated upstream
 add_cells = False
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 output_directory = 'Pictures/_test/'   #The relative directory where the output images will be saved
+=======
+add_cells = True                #Do you want to add cells to your image?
+display_colormap = True         #Do you want to display your chosen colormap in a separate window?
+
+cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
+output_directory = 'C:/Users/jkemb/My Drive/Python Projects/Paint Pouring/Pictures/_temp/'   #The relative directory where the output images will be saved
+>>>>>>> Stashed changes
 # output_directory = '8x10s to print/'   #The relative directory where the output images will be saved
 
 ########################################
@@ -49,11 +65,82 @@ for i in range(num_images):
     noise_field = (noise_field-np.min(noise_field))/(np.max(noise_field)-np.min(noise_field))    
     
     if add_cells == True:
-        include_perimeter_regions = np.random.choice([True,False])
+        include_perimeter_regions = False#np.random.choice([True,False])
         gauss_smoothing_sigma = np.random.choice([5,15,25])
         threshold_percentile = np.random.choice([60,70,80])
-        cell_field = 0.5*paint_pour_tools.make_cell_image(image_dimensions, num_voronoi_points=200, gauss_smoothing_sigma=gauss_smoothing_sigma, threshold_percentile=threshold_percentile, 
-                                         minimum_region_area=20,show_plots=False,include_perimeter_regions=include_perimeter_regions)
+        cell_field = paint_pour_tools.make_cell_image(image_dimensions, num_voronoi_points=200, gauss_smoothing_sigma=gauss_smoothing_sigma, threshold_percentile=threshold_percentile, 
+                                         minimum_region_area=20,show_plots=show_intermediate_plots,include_perimeter_regions=include_perimeter_regions)
+        
+        gauss_smoothing_options = np.arange(.001,stop=25,step=1)
+        print('Beginning to loop!')
+        for gauss_smoothing_sigma in gauss_smoothing_options:
+            cell_field = paint_pour_tools.make_cell_image(image_dimensions, num_voronoi_points=100, gauss_smoothing_sigma=gauss_smoothing_sigma, threshold_percentile=threshold_percentile, 
+                                             minimum_region_area=20,show_plots=False,include_perimeter_regions=include_perimeter_regions)
+            
+            plt.close('all')
+            plt.ioff() 
+            plt.imshow(cell_field)
+            plt.tight_layout()
+            plt.savefig('Pictures/test image_'+str(np.round(gauss_smoothing_sigma,1))+'.png',dpi=150)
+            plt.ion()
+        
+        #Define an area within which you want cells to appear
+        area_with_cells_x,area_with_cells_y = [image_dimensions[0]/2,image_dimensions[1]/2]
+        area_with_cells_radius = 200
+        if show_intermediate_plots == True:
+            fig,ax = plt.subplots(1)
+            ax.imshow(cell_field,origin='lower')
+            area_with_cells = plt.Circle((area_with_cells_x,area_with_cells_y),area_with_cells_radius,fill=None,edgecolor='r',linewidth=3)
+            ax.add_patch(area_with_cells)
+            fig.tight_layout()
+        
+        #Identify the centroids of each cell
+        def calculate_cell_centroids(thresholded_cell_image):
+            print('...Calculating cell centroids')
+            #Determine the (x,y) of the various closed contours in a thresholded_cell_image
+            list_of_contours,hierarchy = cv2.findContours(cell_field, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            x_centroids = []
+            y_centroids = []
+            for contour in list_of_contours:
+                temp_thresholded_cell_image = np.zeros(thresholded_cell_image.shape,dtype=np.uint8)
+                temp_thresholded_cell_image = cv2.drawContours(temp_thresholded_cell_image,[contour],contourIdx=-1,color=1,thickness=-1)
+                x_centroid = np.sum(temp_thresholded_cell_image*x)/np.sum(temp_thresholded_cell_image)
+                y_centroid = np.sum(temp_thresholded_cell_image*y)/np.sum(temp_thresholded_cell_image)
+                # ax.scatter(x_centroid,y_centroid,color='red')
+                x_centroids.append(x_centroid)
+                y_centroids.append(y_centroid)
+            return np.transpose(np.array([x_centroids,y_centroids]))
+        cell_centroids = calculate_cell_centroids(cell_field)
+
+    
+
+        def remove_cells_outside_circular_region(thresholded_cell_image,center,radius):
+            print('...Removing cells that fall outside the defined region')
+            #Determine the (x,y) of the various closed contours in a thresholded_cell_image
+            list_of_contours,hierarchy = cv2.findContours(cell_field, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            new_thresholded_cell_image = np.zeros(thresholded_cell_image.shape,dtype=np.uint8)
+            cell_centroids = calculate_cell_centroids(cell_field)
+            x_centroids,y_centroids=[cell_centroids[:,0],cell_centroids[:,1]]
+            for contour in list_of_contours:
+                temp_thresholded_cell_image = np.zeros(thresholded_cell_image.shape,dtype=np.uint8)
+                temp_thresholded_cell_image = cv2.drawContours(temp_thresholded_cell_image,[contour],contourIdx=-1,color=1,thickness=-1)
+                x_centroid = np.sum(temp_thresholded_cell_image*x)/np.sum(temp_thresholded_cell_image)
+                y_centroid = np.sum(temp_thresholded_cell_image*y)/np.sum(temp_thresholded_cell_image)
+                distance_from_circle_center = np.sqrt((x_centroid-center[0])**2+(y_centroid-center[1])**2)
+                if distance_from_circle_center < radius:
+                    new_thresholded_cell_image += temp_thresholded_cell_image
+            return new_thresholded_cell_image
+        
+        cell_field = remove_cells_outside_circular_region(cell_field, [area_with_cells_x,area_with_cells_y], area_with_cells_radius)
+        if show_intermediate_plots == True:
+            fig,ax = plt.subplots(1)
+            ax.imshow(cell_field,origin='lower')
+            area_with_cells = plt.Circle((area_with_cells_x,area_with_cells_y),area_with_cells_radius,fill=None,edgecolor='r',linewidth=3)
+            ax.add_patch(area_with_cells)
+            fig.tight_layout()
+            
+        os.sys.exit()
+        
         
         noise_field += cell_field
     
@@ -61,15 +148,17 @@ for i in range(num_images):
     num_levels = np.random.choice([7,10,13,17,20,25,30,40,50])
     levels = np.sort(np.random.uniform(low=noise_field.min(),high=noise_field.max(),size=num_levels))
     
-    #Pick the colormap to be used for this image and record its name
+    #Pick the colormap to be used for this image
     if cmap_name == 'custom':
         cmap = paint_pour_tools.make_custom_colormap(colors=['#33192F','#803D75','#CF2808','#FEE16E','#6AA886','#5CE5FB','#1A1941'],show_plot=True)
     elif cmap_name == 'any':
         cmap = paint_pour_tools.pick_random_colormap()
-            
+        
+    #Pick discrete colors from the colormap and shuffle them around to make a new version.
     # colors = np.random.randint(low=0,high=256,size=num_levels)  #Pick "num_levels" random colors from the chosen colormap. 
     # cmap = ListedColormap([cmap(i) for i in colors],name=cmap.name)    #Re-make the colormap using our chosen colors
     
+<<<<<<< Updated upstream
     #Plotting time
     fig,ax = plt.subplots(1,figsize=(image_dimensions[0]/120, image_dimensions[1]/120))
     ax = plt.Axes(fig, [0., 0., 1., 1.])           #make it so the plot takes up the ENTIRE figure
@@ -79,6 +168,30 @@ for i in range(num_images):
     ax.set_ylim(0,image_dimensions[1])
     # ax.imshow(noise_field,cmap=cmap)
     fig.tight_layout()
+=======
+    if display_colormap == True:
+        fig_cmap,ax_cmap = plt.subplots(figsize=(8,2))
+        ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap,origin='lower')
+        ax_cmap.set_title('Your chosen colormap')
+        ax_cmap.axis('off')
+        fig_cmap.tight_layout()
+    
+    #Plotting time
+    if display_image == True:
+        #Temporarily disable displaying the image if the image is larger than the screen, otherwise we'll get weird graphical bugs
+        if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080): 
+            plt.ioff()
+        fig,ax = plt.subplots(1,figsize=(image_dimensions[0]/120, image_dimensions[1]/120))
+        ax = plt.Axes(fig, [0., 0., 1., 1.])           #make it so the plot takes up the ENTIRE figure
+        fig.add_axes(ax)
+        # contour = ax.contourf(x,y,noise_field,cmap=cmap,levels=levels,extend='both')
+        # ax.set_xlim(0,image_dimensions[0])     #Set the x- and y-bounds of the plotting area.
+        # ax.set_ylim(0,image_dimensions[1])
+        ax.imshow(noise_field,cmap=cmap)
+        # fig.tight_layout()
+        if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):    #Re-enable interactive mode, in case it was turned off earlier.
+            plt.ion()
+>>>>>>> Stashed changes
     
     if save_image == True:
         filename = cmap.name+'_'+str(num_levels)+'levels_'+'_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]])+'_stretch'+str(stretch_value)+\

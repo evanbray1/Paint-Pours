@@ -146,6 +146,7 @@ def perlin_field(image_dimensions,octave,stretch):
 #Typically each octave gets multiplied by 1/(2^octave) before adding it to the master image array. 
 #However, here we replace 1/(2^octave) with "relative_power" which gets randomly chosen from an octave-dependent range of values.
 def fractal_noise(image_dimensions,relative_powers,stretch):
+    print('...Making fractal noise layer')
     num_octaves = len(relative_powers)
     image = np.zeros((image_dimensions[1],image_dimensions[0]))     #Define an empty array where we'll build the final image
     
@@ -159,12 +160,14 @@ def fractal_noise(image_dimensions,relative_powers,stretch):
     return image.astype('float32'), vectors
 
 def make_voronoi(npoints,width,height):
+    print('...Making Voronoi object')
     x = np.random.uniform(0,width,npoints)
     y = np.random.uniform(0,height,npoints)
     points = np.array(list(zip(x,y)))
     return Voronoi(points)
 
 def voronoi_to_points(voronoi,spacing):
+    print('...Converting Voronoi object to discrete points')
     #Converts the lines of a Voronoi object to a series of (x,y) points with a spacing = "spacing".
     ridge_points = np.empty((0, 2), float)
     for i, ridge in enumerate(voronoi.ridge_vertices):
@@ -192,6 +195,7 @@ def voronoi_to_points(voronoi,spacing):
     return ridge_points[:, 0], ridge_points[:, 1]
 
 def remove_perimeter_regions(thresholded_image):
+    print('...Removing cells that fall partially outside image')
     image_with_border = cv2.copyMakeBorder(thresholded_image,1,1,1,1,cv2.BORDER_CONSTANT,value=1)
     flooded_image = cv2.floodFill(image_with_border,None,(0,0),0)[1]
     h,w = flooded_image.shape
@@ -199,6 +203,7 @@ def remove_perimeter_regions(thresholded_image):
     return trimmed_image
 
 def get_contour_pixel_areas(image,list_of_contours):
+    print('...Calculating area of cells')
     #Determine the areas of the various closed contours in an image
     height,width = image.shape
     areas = []
@@ -210,7 +215,8 @@ def get_contour_pixel_areas(image,list_of_contours):
     return np.array(areas)
 
 def remove_small_regions(image,size_threshold):
-    image,contours,hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    print('...Removing cells smaller than '+str(int(size_threshold))+' pixels in area')
+    contours,hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     contour_areas = get_contour_pixel_areas(image, contours)
     small_regions = np.where(contour_areas < size_threshold)[0]
     # small_regions = small_regions[np.where(contour_areas < size_threshold)[0]]
@@ -224,6 +230,7 @@ def remove_small_regions(image,size_threshold):
     return final_image
 
 def pick_random_colormap(print_choice=False):
+    print('...Picking random colormap')
     #Some colormaps are just bad looking for this art, IMO. I list them here so I can make sure to avoid them during the random-picking process later.
     bad_cmaps = ['flag','Accent','gist_stern','Paired','Dark2','Set1','Set2','Set3','tab10','tab20','tab20c','tab20b','binary','Pastel1','Pastel2','gist_yarg','gist_gray','brg','CMRmap','gist_ncar','gist_rainbow','hsv','terrain','gnuplot2','nipy_spectral','prism']
     non_reversed_colormaps = [x for x in plt.colormaps() if '_r' not in x]      #Generate a list of all colormaps that don't contain "_r" in their name, indicating they are just a reversed version of another colormap. "Grays" and "Grays_r" look fundamentally the same for this type of art.
@@ -236,10 +243,11 @@ def pick_random_colormap(print_choice=False):
         # print('Randomly chose an ugly colormap! Choosing again...')
         cmap = plt.cm.get_cmap(np.random.choice(non_reversed_colormaps))
     if print_choice==True:
-        print('Chosen colormap: ',cmap.name)
+        print('...Chosen colormap: ',cmap.name)
     return cmap
 
 def make_custom_colormap(colors=None,nodes=None,show_plot=False):
+    print('...Making a custom colormap')
     #Colors = a list of hex codes for colors you want your colormap to be composed of
     #Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
     #       -The first and last value must be 0 and 1, respectively.
@@ -263,6 +271,7 @@ def make_custom_colormap(colors=None,nodes=None,show_plot=False):
 
 def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,threshold_percentile,minimum_region_area,
                     show_plots=False,include_perimeter_regions=False):
+    print('...Producing a thresholded cell image')
     #num_voronoi_points = number of scatterpoints used to generate the Voronoi diagram. Higher number = more cells, in general
     #gauss_smoothing_sigma = In pixels, how "round" the corners of the cells are
     #threshold_percentile = thickness of the webbing between cells. Low number = thicker webbing
