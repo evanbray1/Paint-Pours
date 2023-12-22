@@ -28,7 +28,7 @@ save_image = False                 #Do you want to save a .png copy of your imag
 num_images = 1                    #How many images do you want to produce?
 show_intermediate_plots = True  #Do you want to show some intermediate results to help with troubleshooting?
 make_surface_plot = False           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
-add_cells = False
+add_cells = True
 display_colormap = True         #Do you want to display your chosen colormap in a separate window?
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
@@ -59,23 +59,23 @@ for i in range(num_images):
     
     if add_cells == True:
         include_perimeter_regions = False#np.random.choice([True,False])
-        gauss_smoothing_sigma = np.random.choice([5,15,25])
-        threshold_percentile = np.random.choice([60,70,80])
-        cell_field = paint_pour_tools.make_cell_image(image_dimensions, num_voronoi_points=200, gauss_smoothing_sigma=gauss_smoothing_sigma, threshold_percentile=threshold_percentile, 
+        gauss_smoothing_sigma = 15#np.random.choice([5,15,25])
+        threshold_percentile = 70#np.random.choice([60,70,80])
+        cell_field = paint_pour_tools.make_cell_image(image_dimensions, num_voronoi_points=100, gauss_smoothing_sigma=gauss_smoothing_sigma, threshold_percentile=threshold_percentile, 
                                          minimum_region_area=20,show_plots=show_intermediate_plots,include_perimeter_regions=include_perimeter_regions)
         
-        gauss_smoothing_options = np.arange(.001,stop=25,step=1)
-        print('Beginning to loop!')
-        for gauss_smoothing_sigma in gauss_smoothing_options:
-            cell_field = paint_pour_tools.make_cell_image(image_dimensions, num_voronoi_points=100, gauss_smoothing_sigma=gauss_smoothing_sigma, threshold_percentile=threshold_percentile, 
-                                             minimum_region_area=20,show_plots=False,include_perimeter_regions=include_perimeter_regions)
+        # gauss_smoothing_options = np.arange(.001,stop=25,step=1)
+        # print('Beginning to loop!')
+        # for gauss_smoothing_sigma in gauss_smoothing_options:
+        # cell_field = paint_pour_tools.make_cell_image(image_dimensions, num_voronoi_points=100, gauss_smoothing_sigma=gauss_smoothing_sigma, threshold_percentile=threshold_percentile, 
+        #                                  minimum_region_area=20,show_plots=False,include_perimeter_regions=include_perimeter_regions)
             
-            plt.close('all')
-            plt.ioff() 
-            plt.imshow(cell_field)
-            plt.tight_layout()
-            plt.savefig('Pictures/test image_'+str(np.round(gauss_smoothing_sigma,1))+'.png',dpi=150)
-            plt.ion()
+            # plt.close('all')
+            # plt.ioff() 
+            # plt.imshow(cell_field)
+            # plt.tight_layout()
+            # plt.savefig('Pictures/test image_'+str(np.round(gauss_smoothing_sigma,1))+'.png',dpi=150)
+            # plt.ion()
         
         #Define an area within which you want cells to appear
         area_with_cells_x,area_with_cells_y = [image_dimensions[0]/2,image_dimensions[1]/2]
