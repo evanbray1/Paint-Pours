@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap,LinearSegmentedColormap
+from matplotlib import colorbar
 from scipy.ndimage import gaussian_filter
 from scipy.spatial import Voronoi, voronoi_plot_2d
 #import matplotlib.cm as cm
@@ -10,7 +11,31 @@ import cv2
 import paint_pour_tools
 plt.close('all')
 start_time = time.time()
-# np.random.seed(7)
+np.random.seed(7)
+
+#TODO, fix the "your chosen colormap" plot so it's not uniformly divided.
+
+# x = np.linspace(0,1,1000)
+# y = x.copy()
+# y -= np.min(y[y != -np.inf])
+# y /= y.max()
+# y_log = np.log10(exponent*y+1)/np.log10(exponent)
+# y_log -= np.min(y_log[y_log != -np.inf])
+# y_log /= y_log.max()
+
+
+
+# fig,ax = plt.subplots(1)
+# ax.plot(x,y,label='Linear')
+# for exponent in np.logspace(-1,5,7):
+#     ax.plot(x,log_rescaler(y, exponent),label='log base '+str(np.round(exponent,1)))
+# for exponent in np.logspace(0,5,6):
+#     ax.plot(x,power_rescaler(y, exponent),':',label='power base '+str(np.round(exponent,1)))
+# ax.legend(loc='best')
+# ax.set_xlim(0,1)
+# ax.set_ylim(0,1)
+# fig.tight_layout()
+
 
 #To-do, pick a more optimum set of gauss_smoothing and threshold parameters. 
 #Refer to images saved in Pictures folder.
@@ -24,16 +49,15 @@ image_dimensions = [1*1920,1*1080]
 # image_dimensions = [3000,2400]
 
 display_image = True               #Do you want to display the image on the screen? NOTE, automatically set to false when image_dimensions > [1920,1080], otherwise there's some rendering problems.
-save_image = False                 #Do you want to save a .png copy of your image?
+save_image = True                 #Do you want to save a .png copy of your image?
 num_images = 1                    #How many images do you want to produce?
 show_intermediate_plots = True  #Do you want to show some intermediate results to help with troubleshooting?
-make_surface_plot = False           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
-add_cells = True
+make_surface_plot = True           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
+add_cells = False
 display_colormap = True         #Do you want to display your chosen colormap in a separate window?
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 output_directory = 'Pictures/_test/'   #The relative directory where the output images will be saved
-
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 output_directory = 'C:/Users/jkemb/My Drive/Python Projects/Paint Pouring/Pictures/_temp/'   #The relative directory where the output images will be saved
@@ -50,7 +74,7 @@ for i in range(num_images):
     
     # octave_powers = [1,np.round(np.random.uniform(0.1,0.5),1),np.round(np.random.uniform(0.0,0.1),2),np.random.choice([0.0,0.01,0.02,0.08],p=[0.55,0.15,0.15,0.15])] #Recommend the following [1,(0.1-0.5),(0.0-0.1),(0.0-0.1)]. The 0th octave should always keep a power of 1, for convenience purposes.
     stretch_value = np.random.randint(-5,6)   #Changes how strongly the contour lines tend to be oriented horizontally vs. vertically. 0 = no preference. 5 = strong preference for horizontal. -5 = strong preference for vertical.
-    octave_powers = [1, 0.02, 0.05, 0.0]
+    octave_powers = [0, 0.0, 0.1, 0.0]
     #Actually calculate the Fractal noise image!
     noise_field, vector_info = paint_pour_tools.fractal_noise(image_dimensions, octave_powers,stretch_value)
     
@@ -132,13 +156,17 @@ for i in range(num_images):
             ax.add_patch(area_with_cells)
             fig.tight_layout()
             
-        os.sys.exit()
+        # os.sys.exit()
         
         
         noise_field += cell_field
     
+    #If desired, re-map the values of noise_field. Perhaps with a log or power stretch.
+    rescaling_exponent = 1#10**np.random.uniform(0.1,3)
+    noise_field = paint_pour_tools.log_rescaler(noise_field,exponent=rescaling_exponent)
+    
     #Pick the number of levels in your contour map, and the Z-values they correspond to
-    num_levels = np.random.choice([7,10,13,17,20,25,30,40,50])
+    num_levels = 16#np.random.choice([7,10,13,17,20,25,30,40,50])
     levels = np.sort(np.random.uniform(low=noise_field.min(),high=noise_field.max(),size=num_levels))
     
     #Pick the colormap to be used for this image
@@ -148,15 +176,20 @@ for i in range(num_images):
         cmap = paint_pour_tools.pick_random_colormap()
         
     #Pick discrete colors from the colormap and shuffle them around to make a new version.
-    # colors = np.random.randint(low=0,high=256,size=num_levels)  #Pick "num_levels" random colors from the chosen colormap. 
-    # cmap = ListedColormap([cmap(i) for i in colors],name=cmap.name)    #Re-make the colormap using our chosen colors
+    colors = np.random.randint(low=0,high=256,size=num_levels)  #Pick "num_levels" random colors from the chosen colormap. 
+    cmap = ListedColormap([cmap(i) for i in colors],name=cmap.name)    #Re-make the colormap using our chosen colors
     
     if display_colormap == True:
-        fig_cmap,ax_cmap = plt.subplots(figsize=(8,2))
-        ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap,origin='lower')
-        ax_cmap.set_title('Your chosen colormap')
-        ax_cmap.axis('off')
-        fig_cmap.tight_layout()
+        # fig_cmap,ax_cmap = plt.subplots(figsize=(8,2))
+        # ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap,origin='lower')
+        # ax_cmap.set_title('Your chosen colormap')
+        # ax_cmap.axis('off')
+        # fig_cmap.tight_layout()
+        
+        fig = plt.figure()
+        ax = fig.add_axes([0.05, 0.80, 0.9, 0.1])
+        
+        cb = colorbar.ColorbarBase(ax, orientation='horizontal',cmap=cmap)
     
     #Plotting time
     if display_image == True:
@@ -175,14 +208,18 @@ for i in range(num_images):
             plt.ion()
     
     if save_image == True:
-        filename = cmap.name+'_'+str(num_levels)+'levels_'+'_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]])+'_stretch'+str(stretch_value)+\
-            '_gausssmooth'+str(gauss_smoothing_sigma)+'_threshold'+str(threshold_percentile)+'.png'
+        filename = cmap.name+'_'+str(num_levels)+'levels_'+'_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]])+\
+            '_stretch'+str(stretch_value)+'_exponent'+'{:.0f}'.format(rescaling_exponent)
+
+        if add_cells == True:
+            filename += '_gausssmooth'+str(gauss_smoothing_sigma)+'_threshold'+str(threshold_percentile)+'.png'
+
                     
         #Save the images in the desired output_directory
         output_directory_temp = output_directory#+cmap_name_temp+'/'
         if os.path.exists(output_directory_temp) == False:    #Does the specified directory already exist?
             os.makedirs(output_directory_temp)                    #Create the directory if necessary.
-        fig.savefig(output_directory_temp+filename,dpi=120)    #save the displayed image
+        fig.savefig(output_directory_temp+filename+'.png',dpi=120)    #save the displayed image
 
     
     #Sometimes it can be helpful to view the image as an interactable surface plot instead of a contour plot.

@@ -5,6 +5,29 @@ import cv2
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap,LinearSegmentedColormap
 from scipy.ndimage import gaussian_filter
+import os
+
+#Rescale an array from 0-1 logarithmically, just like you would do in DS9
+def log_rescaler(y,exponent):
+    if exponent != 1:
+        y_rescaled = np.log10(exponent*y+1)/np.log10(exponent)
+        y_rescaled -= np.min(y_rescaled[y_rescaled != -np.inf])
+        y_rescaled /= y_rescaled.max()
+        if (exponent < 1) and (exponent > 0):
+            y_rescaled = abs(y_rescaled-1)
+    else:
+        y_rescaled = y.copy()
+    return y_rescaled  
+
+#Rescale an array from 0-1 with a power law, just like you would do in DS9
+def power_rescaler(y,exponent):
+    if exponent < 1:
+        print('WARNING, exponent must be >=1')
+        os.sys.exit()
+    y_rescaled = (exponent**y-1)/exponent**y
+    y_rescaled -= np.min(y_rescaled[y_rescaled != -np.inf])
+    y_rescaled /= y_rescaled.max()
+    return y_rescaled  
 
 #Define a function for interpolating between two points, which we do a lot here. This is a convenient one because it doesn't have "kinks" at the endpoints like a linear interpolation function would.
 #https://en.wikipedia.org/wiki/Smoothstep
