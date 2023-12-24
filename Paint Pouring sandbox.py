@@ -11,7 +11,7 @@ import cv2
 import paint_pour_tools
 plt.close('all')
 start_time = time.time()
-np.random.seed(7)
+np.random.seed(8)
 
 #TODO, fix the "your chosen colormap" plot so it's not uniformly divided.
 
@@ -166,32 +166,22 @@ for i in range(num_images):
     noise_field = paint_pour_tools.log_rescaler(noise_field,exponent=rescaling_exponent)
     
     #Pick the number of levels in your contour map, and the Z-values they correspond to
-    num_levels = 16#np.random.choice([7,10,13,17,20,25,30,40,50])
-    # levels = np.sort(np.random.uniform(low=noise_field.min(),high=noise_field.max(),size=num_levels))
-    # levels= [0.01,0.02,0.03,0.9]
+    num_levels = np.random.choice([7,10,13,17,20,25,30,40,50])
     
     #Pick the colormap to be used for this image
     if cmap_name == 'custom':
         cmap = paint_pour_tools.make_custom_colormap(colors=['#33192F','#803D75','#CF2808','#FEE16E','#6AA886','#5CE5FB','#1A1941'],show_plot=True)
     elif cmap_name == 'any':
-        cmap = paint_pour_tools.pick_random_colormap()
-        
-    #Pick discrete colors from the colormap and shuffle them around to make a new version.
-    colors = np.random.randint(low=0,high=256,size=num_levels)  #Pick "num_levels" random colors from the chosen colormap. 
-    cmap = ListedColormap([cmap(i) for i in colors],name=cmap.name)    #Re-make the colormap using our chosen colors
-    cmap = paint_pour_tools.make_custom_segmented_colormap(colors=cmap(colors),nodes=[0]+list(np.sort(colors/255))+[1],show_plot=True)
+        cmap = paint_pour_tools.pick_random_colormap(show_plot=display_colormap)
     
-    if display_colormap == True:
-        # fig_cmap,ax_cmap = plt.subplots(figsize=(8,2))
-        # ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap,origin='lower')
-        # ax_cmap.set_title('Your chosen colormap')
-        # ax_cmap.axis('off')
-        # fig_cmap.tight_layout()
-        
-        fig = plt.figure()
-        ax = fig.add_axes([0.05, 0.80, 0.9, 0.1])
-        
-        cb = colorbar.ColorbarBase(ax, orientation='horizontal',cmap=cmap)
+    #Pick discrete colors and arrange them in a random order to create a new colormap
+    #Pick discrete colors from the chosen colormap
+    colors = np.random.randint(low=0,high=256,size=num_levels)  #Pick "num_levels" random colors from the chosen colormap. 
+    
+    #Pick discrete "nodes" to define the boundary points between segments of the colormap
+    nodes = np.sort(np.random.uniform(low=0,high=1,size=len(colors)-1))
+    cmap = paint_pour_tools.make_custom_segmented_colormap(colors=cmap(colors),nodes=[0]+list(nodes)+[1],show_plot=display_colormap)
+    
     
     #Plotting time
     if display_image == True:
