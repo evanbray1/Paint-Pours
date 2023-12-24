@@ -271,7 +271,7 @@ def pick_random_colormap(print_choice=False):
 
 def make_custom_colormap(colors=None,nodes=None,show_plot=False):
     print('...Making a custom colormap')
-    #Colors = a list of hex codes for colors you want your colormap to be composed of
+    #Colors = a list of hex codes or RGB tuples for colors you want your colormap to be composed of
     #Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
     #       -The first and last value must be 0 and 1, respectively.
     #       -For example, if nodes = [0,0.5,1], your colormap will start at color[0], hit color[1] at the middle value, and reach color[2] at the max value
@@ -283,6 +283,40 @@ def make_custom_colormap(colors=None,nodes=None,show_plot=False):
         nodes = np.linspace(0,1.0,len(colors))  
     # nodes = np.concatenate((np.linspace(0,0.6,len(colors)-1),np.array([1.0])))
     cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes, colors)))
+    
+    if show_plot == True:
+        fig_cmap,ax_cmap = plt.subplots(figsize=(8,2))
+        ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap_custom,origin='lower')
+        ax_cmap.set_title('Your custom colormap')
+        ax_cmap.axis('off')
+        fig_cmap.tight_layout()
+    return cmap_custom
+
+def make_custom_segmented_colormap(colors=None,nodes=None,show_plot=False):
+    print('...Making a custom colormap')
+    #Colors = a list of hex codes for colors you want your colormap to be composed of
+    #Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
+    #       -The first and last value must be 0 and 1, respectively.
+    #       -For example, if nodes = [0,0.5,1], your colormap will start at color[0], hit color[1] at the middle value, and reach color[2] at the max value
+    if colors == None:
+        print('WARNING: No input colors specified. Picking some default values....')
+        colors=[(1,0,0),(0,1,0),(0,0,1)]
+    if nodes == None:
+        print('WARNING: No input nodes specified. Picking an evenly-spaced array....')
+        nodes = np.linspace(0,1.0,len(colors)+1)  
+        
+    #Because we're making a segmented colormap, we must duplicate each color in the colors array, as well as the inner noes of the nodes array
+    colors_new = []
+    nodes_new = []
+    for i in range(len(colors)):
+        colors_new.append(colors[i])
+        colors_new.append(colors[i])
+    for i in range(len(nodes)):
+        nodes_new.append(nodes[i])
+        nodes_new.append(nodes[i])
+    nodes_new = nodes_new[1:-1]
+
+    cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes_new, colors_new)))
     
     if show_plot == True:
         fig_cmap,ax_cmap = plt.subplots(figsize=(8,2))

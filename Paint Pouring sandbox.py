@@ -56,7 +56,7 @@ make_surface_plot = True           #Helpful for diagnostic purposes in case you 
 add_cells = False
 display_colormap = True         #Do you want to display your chosen colormap in a separate window?
 
-cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
+cmap_name = 'custom'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 output_directory = 'Pictures/_test/'   #The relative directory where the output images will be saved
 
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
@@ -179,6 +179,7 @@ for i in range(num_images):
     #Pick discrete colors from the colormap and shuffle them around to make a new version.
     colors = np.random.randint(low=0,high=256,size=num_levels)  #Pick "num_levels" random colors from the chosen colormap. 
     cmap = ListedColormap([cmap(i) for i in colors],name=cmap.name)    #Re-make the colormap using our chosen colors
+    cmap = paint_pour_tools.make_custom_segmented_colormap(colors=cmap(colors),nodes=[0]+list(np.sort(colors/255))+[1],show_plot=True)
     
     if display_colormap == True:
         # fig_cmap,ax_cmap = plt.subplots(figsize=(8,2))
