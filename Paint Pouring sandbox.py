@@ -167,7 +167,8 @@ for i in range(num_images):
     
     #Pick the number of levels in your contour map, and the Z-values they correspond to
     num_levels = 16#np.random.choice([7,10,13,17,20,25,30,40,50])
-    levels = np.sort(np.random.uniform(low=noise_field.min(),high=noise_field.max(),size=num_levels))
+    # levels = np.sort(np.random.uniform(low=noise_field.min(),high=noise_field.max(),size=num_levels))
+    # levels= [0.01,0.02,0.03,0.9]
     
     #Pick the colormap to be used for this image
     if cmap_name == 'custom':
