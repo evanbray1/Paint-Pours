@@ -13,30 +13,6 @@ plt.close('all')
 start_time = time.time()
 np.random.seed(8)
 
-#TODO, fix the "your chosen colormap" plot so it's not uniformly divided.
-
-# x = np.linspace(0,1,1000)
-# y = x.copy()
-# y -= np.min(y[y != -np.inf])
-# y /= y.max()
-# y_log = np.log10(exponent*y+1)/np.log10(exponent)
-# y_log -= np.min(y_log[y_log != -np.inf])
-# y_log /= y_log.max()
-
-
-
-# fig,ax = plt.subplots(1)
-# ax.plot(x,y,label='Linear')
-# for exponent in np.logspace(-1,5,7):
-#     ax.plot(x,log_rescaler(y, exponent),label='log base '+str(np.round(exponent,1)))
-# for exponent in np.logspace(0,5,6):
-#     ax.plot(x,power_rescaler(y, exponent),':',label='power base '+str(np.round(exponent,1)))
-# ax.legend(loc='best')
-# ax.set_xlim(0,1)
-# ax.set_ylim(0,1)
-# fig.tight_layout()
-
-
 #To-do, pick a more optimum set of gauss_smoothing and threshold parameters. 
 #Refer to images saved in Pictures folder.
 
@@ -53,14 +29,14 @@ save_image = True                 #Do you want to save a .png copy of your image
 num_images = 1                    #How many images do you want to produce?
 show_intermediate_plots = True  #Do you want to show some intermediate results to help with troubleshooting?
 make_surface_plot = True           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
-add_cells = False
+add_cells = True
 display_colormap = True         #Do you want to display your chosen colormap in a separate window?
 
-cmap_name = 'custom'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-output_directory = 'Pictures/_test/'   #The relative directory where the output images will be saved
-
 cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-output_directory = 'C:/Users/jkemb/My Drive/Python Projects/Paint Pouring/Pictures/_temp/'   #The relative directory where the output images will be saved
+output_directory = 'Pictures/_temp/'   #The relative directory where the output images will be saved
+
+# cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
+# output_directory = 'C:/Users/jkemb/My Drive/Python Projects/Paint Pouring/Pictures/_temp/'   #The relative directory where the output images will be saved
 
 ########################################
 

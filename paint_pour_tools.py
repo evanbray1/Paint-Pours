@@ -294,7 +294,8 @@ def make_custom_colormap(colors=None,nodes=None,show_plot=False):
         fig_cmap,ax_cmap = plt.subplots(figsize=(12,2))
         ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap_custom,origin='lower',extent=[0,1,0,0.1])
         ax_cmap.set_title('Your custom colormap')
-        ax_cmap.set_xticks(ticks=np.array(nodes),labels=['{:.2f}'.format(node) for node in nodes],rotation=60)#,rotation_mode='anchor',ha='right')
+        ax_cmap.set_xticks(ticks=np.array(nodes))
+        ax_cmap.set_xticklabels(['{:.2f}'.format(node) for node in nodes],rotation=60)
         ax_cmap.set_yticks([])
         fig_cmap.tight_layout()
     return cmap_custom
@@ -330,7 +331,8 @@ def make_custom_segmented_colormap(colors=None,nodes=None,show_plot=False):
         fig_cmap,ax_cmap = plt.subplots(figsize=(12,2))
         ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap_custom,origin='lower',extent=[0,1,0,0.1])
         ax_cmap.set_title('Your custom segmented colormap')
-        ax_cmap.set_xticks(ticks=np.array(nodes),labels=['{:.2f}'.format(node) for node in nodes],rotation=60)#,rotation_mode='anchor',ha='right')
+        ax_cmap.set_xticks(ticks=np.array(nodes))
+        ax_cmap.set_xticklabels(['{:.2f}'.format(node) for node in nodes],rotation=60)
         ax_cmap.set_yticks([])
         fig_cmap.tight_layout()
     return cmap_custom
