@@ -28,7 +28,7 @@ display_image = True               #Do you want to display the image on the scre
 save_image = True                 #Do you want to save a .png copy of your image?
 num_images = 1                    #How many images do you want to produce?
 show_intermediate_plots = True  #Do you want to show some intermediate results to help with troubleshooting?
-make_surface_plot = True           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
+make_surface_plot = False           #Helpful for diagnostic purposes in case you want to see a low-res surface plot of your image
 add_cells = True
 display_colormap = True         #Do you want to display your chosen colormap in a separate window?
 
@@ -86,45 +86,8 @@ for i in range(num_images):
             area_with_cells = plt.Circle((area_with_cells_x,area_with_cells_y),area_with_cells_radius,fill=None,edgecolor='r',linewidth=3)
             ax.add_patch(area_with_cells)
             fig.tight_layout()
-        
-        #Identify the centroids of each cell
-        def calculate_cell_centroids(thresholded_cell_image):
-            print('...Calculating cell centroids')
-            #Determine the (x,y) of the various closed contours in a thresholded_cell_image
-            list_of_contours,hierarchy = cv2.findContours(cell_field, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-            x_centroids = []
-            y_centroids = []
-            for contour in list_of_contours:
-                temp_thresholded_cell_image = np.zeros(thresholded_cell_image.shape,dtype=np.uint8)
-                temp_thresholded_cell_image = cv2.drawContours(temp_thresholded_cell_image,[contour],contourIdx=-1,color=1,thickness=-1)
-                x_centroid = np.sum(temp_thresholded_cell_image*x)/np.sum(temp_thresholded_cell_image)
-                y_centroid = np.sum(temp_thresholded_cell_image*y)/np.sum(temp_thresholded_cell_image)
-                # ax.scatter(x_centroid,y_centroid,color='red')
-                x_centroids.append(x_centroid)
-                y_centroids.append(y_centroid)
-            return np.transpose(np.array([x_centroids,y_centroids]))
-        cell_centroids = calculate_cell_centroids(cell_field)
 
-    
-
-        def remove_cells_outside_circular_region(thresholded_cell_image,center,radius):
-            print('...Removing cells that fall outside the defined region')
-            #Determine the (x,y) of the various closed contours in a thresholded_cell_image
-            list_of_contours,hierarchy = cv2.findContours(cell_field, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-            new_thresholded_cell_image = np.zeros(thresholded_cell_image.shape,dtype=np.uint8)
-            cell_centroids = calculate_cell_centroids(cell_field)
-            x_centroids,y_centroids=[cell_centroids[:,0],cell_centroids[:,1]]
-            for contour in list_of_contours:
-                temp_thresholded_cell_image = np.zeros(thresholded_cell_image.shape,dtype=np.uint8)
-                temp_thresholded_cell_image = cv2.drawContours(temp_thresholded_cell_image,[contour],contourIdx=-1,color=1,thickness=-1)
-                x_centroid = np.sum(temp_thresholded_cell_image*x)/np.sum(temp_thresholded_cell_image)
-                y_centroid = np.sum(temp_thresholded_cell_image*y)/np.sum(temp_thresholded_cell_image)
-                distance_from_circle_center = np.sqrt((x_centroid-center[0])**2+(y_centroid-center[1])**2)
-                if distance_from_circle_center < radius:
-                    new_thresholded_cell_image += temp_thresholded_cell_image
-            return new_thresholded_cell_image
-        
-        cell_field = remove_cells_outside_circular_region(cell_field, [area_with_cells_x,area_with_cells_y], area_with_cells_radius)
+        cell_field = paint_pour_tools.remove_cells_outside_circular_region(cell_field, [area_with_cells_x,area_with_cells_y], area_with_cells_radius)
         if show_intermediate_plots == True:
             fig,ax = plt.subplots(1)
             ax.imshow(cell_field,origin='lower')
@@ -170,7 +133,7 @@ for i in range(num_images):
         # contour = ax.contourf(x,y,noise_field,cmap=cmap,levels=levels,extend='both')
         # ax.set_xlim(0,image_dimensions[0])     #Set the x- and y-bounds of the plotting area.
         # ax.set_ylim(0,image_dimensions[1])
-        ax.imshow(noise_field,cmap=cmap)
+        ax.imshow(noise_field,cmap=cmap,origin='lower')
         # fig.tight_layout()
         if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):    #Re-enable interactive mode, in case it was turned off earlier.
             plt.ion()
@@ -196,6 +159,9 @@ for i in range(num_images):
         fig1, ax1 = plt.subplots(figsize=(8,6),subplot_kw={"projection": "3d"})
         surf = ax1.plot_surface(x,y,noise_field, cmap=cmap,linewidth=0, antialiased=False,rcount=50,ccount=50)
         fig1.tight_layout()
+        
+    print('\n\nGauss smoothing sigma = ',gauss_smoothing_sigma)
+    print('Threshold percentile = ',threshold_percentile)
 
 end_time=time.time()
 elapsed_time = round(end_time - start_time,2)   #calculate the amount of time that has elapsed since program start, and print it

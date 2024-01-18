@@ -239,7 +239,7 @@ def get_contour_pixel_areas(image,list_of_contours):
 
 def remove_small_regions(image,size_threshold):
     print('...Removing cells smaller than '+str(int(size_threshold))+' pixels in area')
-    contours,hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contours,hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[1:]
     contour_areas = get_contour_pixel_areas(image, contours)
     small_regions = np.where(contour_areas < size_threshold)[0]
     # small_regions = small_regions[np.where(contour_areas < size_threshold)[0]]
@@ -276,7 +276,7 @@ def pick_random_colormap(print_choice=False,show_plot=False):
     return cmap
 
 def make_custom_colormap(colors=None,nodes=None,show_plot=False):
-    print('...Making a custom colormap')
+    print('...Making a custom continuous colormap')
     #Colors = a list of hex codes or RGB tuples for colors you want your colormap to be composed of
     #Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
     #       -The first and last value must be 0 and 1, respectively.
@@ -301,7 +301,7 @@ def make_custom_colormap(colors=None,nodes=None,show_plot=False):
     return cmap_custom
 
 def make_custom_segmented_colormap(colors=None,nodes=None,show_plot=False):
-    print('...Making a custom colormap')
+    print('...Making a custom segmented colormap')
     #Colors = a list of tuples for colors you want your colormap to be composed of
     #Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
     #       -The first and last value must be 0 and 1, respectively.
@@ -409,3 +409,48 @@ def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,th
     # print('Done removing small regions')
 
     return image_final
+
+#Identify the centroids of each cell
+def calculate_cell_centroids(thresholded_cell_image):
+    print('...Calculating cell centroids')
+    
+    #Define a grid of (x,y) coordinates to represent the pixel locations in the image. Necessary for making a contour plot later.
+    x,y = [np.arange(thresholded_cell_image.shape[1]),np.arange(thresholded_cell_image.shape[0])]
+    x,y = np.meshgrid(x,y)
+
+    #Determine the (x,y) of the various closed contours in a thresholded_cell_image
+    list_of_contours,hierarchy = cv2.findContours(thresholded_cell_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[1:]
+    x_centroids = []
+    y_centroids = []
+    for contour in list_of_contours:
+        temp_thresholded_cell_image = np.zeros(thresholded_cell_image.shape,dtype=np.uint8)
+        temp_thresholded_cell_image = cv2.drawContours(temp_thresholded_cell_image,[contour],contourIdx=-1,color=1,thickness=-1)
+        x_centroid = np.sum(temp_thresholded_cell_image*x)/np.sum(temp_thresholded_cell_image)
+        y_centroid = np.sum(temp_thresholded_cell_image*y)/np.sum(temp_thresholded_cell_image)
+        # ax.scatter(x_centroid,y_centroid,color='red')
+        x_centroids.append(x_centroid)
+        y_centroids.append(y_centroid)
+    return np.transpose(np.array([x_centroids,y_centroids]))
+
+
+def remove_cells_outside_circular_region(thresholded_cell_image,center,radius):
+    print('...Removing cells that fall outside the defined region')
+    
+    #Define a grid of (x,y) coordinates to represent the pixel locations in the image. Necessary for making a contour plot later.
+    x,y = [np.arange(thresholded_cell_image.shape[1]),np.arange(thresholded_cell_image.shape[0])]
+    x,y = np.meshgrid(x,y)
+    
+    #Determine the (x,y) of the various closed contours in a thresholded_cell_image
+    list_of_contours,hierarchy = cv2.findContours(thresholded_cell_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[1:]
+    new_thresholded_cell_image = np.zeros(thresholded_cell_image.shape,dtype=np.uint8)
+    # cell_centroids = calculate_cell_centroids(cell_field)
+    # x_centroids,y_centroids=[cell_centroids[:,0],cell_centroids[:,1]]
+    for contour in list_of_contours:
+        temp_thresholded_cell_image = np.zeros(thresholded_cell_image.shape,dtype=np.uint8)
+        temp_thresholded_cell_image = cv2.drawContours(temp_thresholded_cell_image,[contour],contourIdx=-1,color=1,thickness=-1)
+        x_centroid = np.sum(temp_thresholded_cell_image*x)/np.sum(temp_thresholded_cell_image)
+        y_centroid = np.sum(temp_thresholded_cell_image*y)/np.sum(temp_thresholded_cell_image)
+        distance_from_circle_center = np.sqrt((x_centroid-center[0])**2+(y_centroid-center[1])**2)
+        if distance_from_circle_center < radius:
+            new_thresholded_cell_image += temp_thresholded_cell_image
+    return new_thresholded_cell_image
