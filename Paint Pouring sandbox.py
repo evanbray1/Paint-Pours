@@ -15,6 +15,7 @@ np.random.seed(8)
 
 #To-do, pick a more optimum set of gauss_smoothing and threshold parameters. 
 #Refer to images saved in Pictures folder.
+#Allow for the max/min regions of the colormap to be continuous instead of segmented
 
 #########USER-DEFINED VARIABLES#########
 # image_dimensions = [500,500]    #[Width,Height] in pixels
