@@ -32,7 +32,7 @@ make_surface_plot = False           #Helpful for diagnostic purposes in case you
 add_cells = True
 display_colormap = True         #Do you want to display your chosen colormap in a separate window?
 
-cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
+cmap_name = 'bwr'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 output_directory = 'Pictures/_temp/'   #The relative directory where the output images will be saved
 
 # cmap_name = 'any'                 #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
@@ -59,9 +59,9 @@ for i in range(num_images):
     
     if add_cells == True:
         include_perimeter_regions = False#np.random.choice([True,False])
-        gauss_smoothing_sigma = 15#np.random.choice([5,15,25])
+        gauss_smoothing_sigma = 6#np.random.choice([5,15,25])
         threshold_percentile = 70#np.random.choice([60,70,80])
-        cell_field = paint_pour_tools.make_cell_image(image_dimensions, num_voronoi_points=100, gauss_smoothing_sigma=gauss_smoothing_sigma, threshold_percentile=threshold_percentile, 
+        cell_field = paint_pour_tools.make_cell_image(image_dimensions, num_voronoi_points=800, gauss_smoothing_sigma=gauss_smoothing_sigma, threshold_percentile=threshold_percentile, 
                                          minimum_region_area=20,show_plots=show_intermediate_plots,include_perimeter_regions=include_perimeter_regions)
         
         # gauss_smoothing_options = np.arange(.001,stop=25,step=1)
@@ -90,36 +90,42 @@ for i in range(num_images):
         cell_field = paint_pour_tools.remove_cells_outside_circular_region(cell_field, [area_with_cells_x,area_with_cells_y], area_with_cells_radius)
         if show_intermediate_plots == True:
             fig,ax = plt.subplots(1)
-            ax.imshow(cell_field,origin='lower')
+            ax.imshow(cell_field,origin='lower',vmin=0,vmax=1)
             area_with_cells = plt.Circle((area_with_cells_x,area_with_cells_y),area_with_cells_radius,fill=None,edgecolor='r',linewidth=3)
             ax.add_patch(area_with_cells)
             fig.tight_layout()
-            
-        # os.sys.exit()
         
-        
-        noise_field += cell_field
+        #Imprint "cell_field" on "noise_field" by taking the positive elements of cell_field and setting them to a distinct value in noise_field
+        ind = np.where(cell_field == 1)
+        # noise_field[ind] = np.random.uniform(low=noise_field.min(),high=noise_field.max())
+        noise_field[ind] = 1.01#noise_field.max()
+        # noise_field += cell_field
     
     #If desired, re-map the values of noise_field. Perhaps with a log or power stretch.
     rescaling_exponent = 1#10**np.random.uniform(0.1,3)
     noise_field = paint_pour_tools.log_rescaler(noise_field,exponent=rescaling_exponent)
     
     #Pick the number of levels in your contour map, and the Z-values they correspond to
-    num_levels = np.random.choice([7,10,13,17,20,25,30,40,50])
+    num_levels = 11#np.random.choice([7,10,13,17,20,25,30,40,50])
     
-    #Pick the colormap to be used for this image
+    #Pick the base colormap to be used for this image. This will get converted to a segmented colormap later.
     if cmap_name == 'custom':
-        cmap = paint_pour_tools.make_custom_colormap(colors=['#33192F','#803D75','#CF2808','#FEE16E','#6AA886','#5CE5FB','#1A1941'],show_plot=True)
+        cmap_base = paint_pour_tools.make_custom_colormap(colors=['#33192F','#803D75','#CF2808','#FEE16E','#6AA886','#5CE5FB','#1A1941'],show_plot=True)
     elif cmap_name == 'any':
-        cmap = paint_pour_tools.pick_random_colormap(show_plot=display_colormap)
+        cmap_base = paint_pour_tools.pick_random_colormap(show_plot=display_colormap)
+    else:
+        cmap_base = plt.cm.get_cmap(cmap_name)
+        if display_colormap == True:
+            paint_pour_tools.plot_colormap(cmap_base,title='Your specified colormap, '+cmap_base.name)
     
     #Pick discrete colors and arrange them in a random order to create a new colormap
     #Pick discrete colors from the chosen colormap
     colors = np.random.randint(low=0,high=256,size=num_levels)  #Pick "num_levels" random colors from the chosen colormap. 
     
-    #Pick discrete "nodes" to define the boundary points between segments of the colormap
+    #Pick discrete "nodes" to define the boundary points between segments of the colormap, and use them to make a segmented colormap 
     nodes = np.sort(np.random.uniform(low=0,high=1,size=len(colors)-1))
-    cmap = paint_pour_tools.make_custom_segmented_colormap(colors=cmap(colors),nodes=[0]+list(nodes)+[1],show_plot=display_colormap)
+    cmap = paint_pour_tools.make_custom_segmented_colormap(colors=cmap_base(colors),nodes=[0]+list(nodes)+[1],show_plot=display_colormap)
+    cmap.set_over(cmap_base(np.random.uniform(low=0,high=1)))    #All values that fall outside the range of mapped values will have a color that is randomly chosen from the base colormap
     
     
     #Plotting time
@@ -133,7 +139,7 @@ for i in range(num_images):
         # contour = ax.contourf(x,y,noise_field,cmap=cmap,levels=levels,extend='both')
         # ax.set_xlim(0,image_dimensions[0])     #Set the x- and y-bounds of the plotting area.
         # ax.set_ylim(0,image_dimensions[1])
-        ax.imshow(noise_field,cmap=cmap,origin='lower')
+        ax.imshow(noise_field,cmap=cmap,origin='lower',vmin=0,vmax=1)
         # fig.tight_layout()
         if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):    #Re-enable interactive mode, in case it was turned off earlier.
             plt.ion()
@@ -159,9 +165,11 @@ for i in range(num_images):
         fig1, ax1 = plt.subplots(figsize=(8,6),subplot_kw={"projection": "3d"})
         surf = ax1.plot_surface(x,y,noise_field, cmap=cmap,linewidth=0, antialiased=False,rcount=50,ccount=50)
         fig1.tight_layout()
-        
-    print('\n\nGauss smoothing sigma = ',gauss_smoothing_sigma)
-    print('Threshold percentile = ',threshold_percentile)
+    print('\n\n')
+    if add_cells == True:        
+        print('Gauss smoothing sigma = ',gauss_smoothing_sigma)
+        print('Threshold percentile = ',threshold_percentile)
+    print('Rescaling exponent =',rescaling_exponent)
 
 end_time=time.time()
 elapsed_time = round(end_time - start_time,2)   #calculate the amount of time that has elapsed since program start, and print it

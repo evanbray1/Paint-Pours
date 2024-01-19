@@ -268,12 +268,15 @@ def pick_random_colormap(print_choice=False,show_plot=False):
     if print_choice==True:
         print('...Chosen colormap: ',cmap.name)
     if show_plot == True:
-        fig_cmap,ax_cmap = plt.subplots(figsize=(12,2))
-        ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap,origin='lower',extent=[0,1,0,0.1])
-        ax_cmap.set_title('Your randomly-chosen base colormap')
-        ax_cmap.set_yticks([])
-        fig_cmap.tight_layout()
+        plot_colormap(cmap,title='Your randomly-chosen base colormap')
     return cmap
+
+def plot_colormap(cmap,title='Your colormap'):
+    fig_cmap,ax_cmap = plt.subplots(figsize=(12,2))
+    ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap,origin='lower',extent=[0,1,0,0.1])
+    ax_cmap.set_title(title)
+    ax_cmap.set_yticks([])
+    fig_cmap.tight_layout()
 
 def make_custom_colormap(colors=None,nodes=None,show_plot=False):
     print('...Making a custom continuous colormap')
