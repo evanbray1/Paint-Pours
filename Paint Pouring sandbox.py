@@ -106,11 +106,11 @@ for i in range(num_images):
     noise_field = paint_pour_tools.log_rescaler(noise_field,exponent=rescaling_exponent)
     
     #Pick the number of levels in your contour map, and the Z-values they correspond to
-    num_levels = 11#np.random.choice([7,10,13,17,20,25,30,40,50])
+    num_levels = np.random.choice([7,10,13,17,20,25,30,40,50])
     
     #Pick the base colormap to be used for this image. This will get converted to a segmented colormap later.
     if cmap_name == 'custom':
-        cmap_base = paint_pour_tools.make_custom_colormap(colors=['#33192F','#803D75','#CF2808','#FEE16E','#6AA886','#5CE5FB','#1A1941'],show_plot=True)
+        cmap_base = paint_pour_tools.make_custom_colormap(colors=['#33192F','#803D75','#CF2808','#FEE16E','#6AA886','#5CE5FB','#1A1941'],show_plot=display_colormap)
     elif cmap_name == 'any':
         cmap_base = paint_pour_tools.pick_random_colormap(show_plot=display_colormap)
     else:
