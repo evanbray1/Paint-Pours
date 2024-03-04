@@ -303,7 +303,7 @@ def make_custom_colormap(colors=None,nodes=None,show_plot=False):
         fig_cmap.tight_layout()
     return cmap_custom
 
-def make_custom_segmented_colormap(colors=None,nodes=None,show_plot=False):
+def make_custom_segmented_colormap(colors=None,nodes=None,show_plot=False,cmap_name = 'custom'):
     print('...Making a custom segmented colormap')
     #Colors = a list of tuples for colors you want your colormap to be composed of
     #Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
@@ -329,6 +329,7 @@ def make_custom_segmented_colormap(colors=None,nodes=None,show_plot=False):
     nodes_new = nodes_new[1:-1]
 
     cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes_new, colors_new)))
+    cmap_custom.name = cmap_name
     
     if show_plot == True:
         fig_cmap,ax_cmap = plt.subplots(figsize=(12,2))
