@@ -7,32 +7,27 @@ from scipy.ndimage import gaussian_filter
 import os
 import time
 
-def generate_paint_pour_images(image_dimensions, num_images=3, display_image=True, save_image=True, show_intermediate_plots=False, make_surface_plot=False, add_cells=False, display_colormap=False, cmap_name='any', output_directory='D:/Google Drive/Python Projects/Paint Pouring/Pictures/temp/'):
+def generate_paint_pour_images(image_dimensions, num_images=3, display_final_image=True, save_image=True, show_intermediate_plots=False, 
+                               add_cells=False, cmap_name='any', output_directory='D:/Google Drive/Python Projects/Paint Pouring/Pictures/temp/'):
     """
     Generate and optionally display or save paint pour images using fractal noise and custom colormaps.
 
     Args:
         image_dimensions (list): [width, height] in pixels for the output image.
         num_images (int): Number of images to generate.
-        display_image (bool): Whether to display the image interactively.
+        display_final_image (bool): Whether to display the image interactively.
         save_image (bool): Whether to save the image as a PNG file.
         show_intermediate_plots (bool): Show intermediate diagnostic plots.
-        make_surface_plot (bool): Show a 3D surface plot of the image.
         add_cells (bool): Overlay Voronoi cell structure on the image.
-        display_colormap (bool): Display the chosen colormap.
         cmap_name (str): Colormap to use ('any', 'custom', or a matplotlib colormap name).
         output_directory (str): Directory to save output images.
     """
     start_time = time.time() # Start the timer to measure elapsed time
     # If the image to be displayed is too large (larger than your monitor's resolution, force interactive mode off. Otherwise some strange things can happen.
-    if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080) or not display_image:
-        plt.ioff()
-    else:
-        plt.ion()
-
-    # Generate some arrays to hold the x and y coordinates for the image grid
-    # x, y = [np.arange(image_dimensions[0]), np.arange(image_dimensions[1])]
-    # x, y = np.meshgrid(x, y)
+    # if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080) or not display_final_image:
+    #     plt.ioff()
+    # else:
+    #     plt.ion()
 
     for i in range(num_images):
         plt.close('all')
@@ -40,42 +35,41 @@ def generate_paint_pour_images(image_dimensions, num_images=3, display_image=Tru
         # Call the new function in the loop
         generate_paint_pour_image(
             image_dimensions=image_dimensions,
-            display_image=display_image,
+            display_final_image=display_final_image,
             save_image=save_image,
             show_intermediate_plots=show_intermediate_plots,
-            make_surface_plot=make_surface_plot,
             add_cells=add_cells,
-            display_colormap=display_colormap,
             cmap_name=cmap_name,
             output_directory=output_directory)
 
-    end_time = time.time()
-    elapsed_time = round(end_time - start_time, 2)
-    print('Elapsed Time: ' + str(elapsed_time) + ' seconds')
+        end_time = time.time()
+        elapsed_time = round(end_time - start_time, 2)
+        print('Elapsed Time: ' + str(elapsed_time) + ' seconds')
 
 def generate_paint_pour_image(
         image_dimensions,
-        display_image=True,
+        display_final_image=True,
         save_image=True,
         show_intermediate_plots=False,
-        make_surface_plot=False,
         add_cells=False,
-        display_colormap=False,
         cmap_name='any',
         output_directory='D:/Google Drive/Python Projects/Paint Pouring/Pictures/temp/', 
-        seed=None
+        seed=None,
+        octave_powers=None,
+        stretch_value=None,
+        rescaling_exponent=None,
+        num_levels=None
     ):
     """
     Generate a single paint pour image using fractal noise, custom colormaps, and optional Voronoi cell overlays.
 
     Args:
     image_dimensions (list): [width, height] in pixels for the output image.
-    display_image (bool): Whether to display the image interactively.
+    display_final_image (bool): Whether to display the image interactively.
     save_image (bool): Whether to save the image as a PNG file.
     show_intermediate_plots (bool): Show intermediate diagnostic plots.
     make_surface_plot (bool): Show a 3D surface plot of the image.
     add_cells (bool): Overlay Voronoi cell structure on the image.
-    display_colormap (bool): Display the chosen colormap.
     cmap_name (str): Colormap to use ('any', 'custom', or a matplotlib colormap name).
     output_directory (str): Directory to save output images.
 
@@ -88,107 +82,104 @@ def generate_paint_pour_image(
         seed = np.random.randint(1, int(1e8))
         np.random.seed(seed)
 
-    octave_powers = [
-        1,
-        np.round(np.random.uniform(0.1, 0.5), 1),
-        np.round(np.random.uniform(0.0, 0.1), 2),
-        np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])
-    ]
-    stretch_value = np.random.randint(-2, 3)
-    noise_field, vector_info = fractal_noise(image_dimensions, octave_powers, stretch_value, 
+    # A fractal noise image is made by summing together multiple layers (octaves) of Perlin noise. What should the relative strength of the layers be?
+    # Pick some values for the fractal noise parameters if they were not provided.
+    if octave_powers is None:
+        octave_powers = [1,
+            np.round(np.random.uniform(0.1, 0.5), 1),
+            np.round(np.random.uniform(0.0, 0.1), 2),
+            np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])]
+    if stretch_value is None:
+        stretch_value = np.random.randint(-2, 3)
+    noise_field_unscaled, vector_info = fractal_noise(image_dimensions, octave_powers, stretch_value, 
                                              show_fractal_noise_plot=show_intermediate_plots, show_perlin_noise_plots=show_intermediate_plots)
-    noise_field = (noise_field - np.min(noise_field)) / (np.max(noise_field) - np.min(noise_field))
 
+    # TODO, flesh this part out more
     if add_cells:
         include_perimeter_regions = False
         gauss_smoothing_sigma = 6
         threshold_percentile = 70
-        cell_field = make_cell_image(
-            image_dimensions,
-            num_voronoi_points=800,
-            gauss_smoothing_sigma=gauss_smoothing_sigma,
-            threshold_percentile=threshold_percentile,
-            minimum_region_area=20,
-            show_plots=show_intermediate_plots,
-            include_perimeter_regions=include_perimeter_regions
-        )
+        cell_field = make_cell_image(image_dimensions,num_voronoi_points=800,gauss_smoothing_sigma=gauss_smoothing_sigma,
+            threshold_percentile=threshold_percentile,minimum_region_area=20,show_plots=show_intermediate_plots,
+            include_perimeter_regions=include_perimeter_regions)
         area_with_cells_x, area_with_cells_y = [image_dimensions[0] / 2, image_dimensions[1] / 2]
         area_with_cells_radius = 200
         if show_intermediate_plots:
             fig, ax = plt.subplots(1)
             ax.imshow(cell_field, origin='lower')
-            area_with_cells = plt.Circle(
-                (area_with_cells_x, area_with_cells_y),
-                area_with_cells_radius,
-                fill=None,
-                edgecolor='r',
-                linewidth=3
-            )
+            area_with_cells = plt.Circle((area_with_cells_x, area_with_cells_y),area_with_cells_radius,fill=None,edgecolor='r',linewidth=3)
             ax.add_patch(area_with_cells)
             fig.tight_layout()
-        cell_field = remove_cells_outside_circular_region(
-            cell_field,
-            [area_with_cells_x, area_with_cells_y],
-            area_with_cells_radius
-        )
+        cell_field = remove_cells_outside_circular_region(cell_field,[area_with_cells_x, area_with_cells_y],area_with_cells_radius)
         if show_intermediate_plots:
             fig, ax = plt.subplots(1)
             ax.imshow(cell_field, origin='lower', vmin=0, vmax=1)
-            area_with_cells = plt.Circle(
-                (area_with_cells_x, area_with_cells_y),
-                area_with_cells_radius,
-                fill=None,
-                edgecolor='r',
-                linewidth=3
-            )
+            area_with_cells = plt.Circle((area_with_cells_x, area_with_cells_y),area_with_cells_radius,fill=None,edgecolor='r', linewidth=3)
             ax.add_patch(area_with_cells)
             fig.tight_layout()
-        ind = np.where(cell_field == 1)
-        noise_field[ind] = 1.01
+        # ind = np.where(cell_field == 1) #Not sure what I put this here for originally. 
+        # noise_field[ind] = 1.01 
 
-    rescaling_exponent = 10 ** np.random.uniform(0.1, 3)
-    noise_field = log_rescaler(noise_field, exponent=rescaling_exponent)
-
-    num_levels = np.random.choice([30, 40, 50])
-
+    # Make a colormap to use for this image
+    if num_levels is None:
+        num_levels = np.random.choice([30, 40, 50])
     if cmap_name == 'custom':
         cmap_base = make_custom_colormap(
             colors=['#33192F', '#803D75', '#CF2808', '#FEE16E', '#6AA886', '#5CE5FB', '#1A1941'],
-            show_plot=display_colormap
-        )
+            show_plot=display_colormap)
     elif cmap_name == 'any':
         cmap_base = pick_random_colormap(show_plot=False)
     else:
         cmap_base = plt.cm.get_cmap(cmap_name)
-    if display_colormap:
-        plot_colormap(cmap_base, title='Your specified base colormap, ' + cmap_base.name)
+    if show_intermediate_plots:
+        plot_colormap(cmap_base, title='Your base colormap, ' + cmap_base.name)
 
+    # Select 'num_levels' random colors from the base colormap and create a segmented colormap from these colors
     colors = np.random.randint(low=0, high=256, size=num_levels)
-    nodes = np.sort(np.random.uniform(low=0, high=1, size=len(colors) - 1))
-    cmap = make_custom_segmented_colormap(
-        colors=cmap_base(colors),
-        nodes=[0] + list(nodes) + [1],
-        show_plot=display_colormap,
-        cmap_name=cmap_base.name
-    )
-    cmap.set_over(cmap_base(np.random.uniform(low=0, high=1)))
+    nodes = np.sort(np.random.uniform(low=0, high=1, size=len(colors) - 1)) # The randomly-chosen boundaries at which the color segments will change
+    cmap = make_custom_segmented_colormap(colors=cmap_base(colors),nodes=[0] + list(nodes) + [1],show_plot=show_intermediate_plots,cmap_name=cmap_base.name)
+    # cmap.set_over(cmap_base(np.random.uniform(low=0, high=1)))
 
-    if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):
-        plt.ioff()
-    fig, ax = plt.subplots(1, figsize=(image_dimensions[0] / 120, image_dimensions[1] / 120))
-    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    # Apply some logarithmic rescaling to the noise field. This adds variety in contour spacing, instead of them all being roughly even in thickness on the final image.
+    # In my opinion, this makes the resulting contours look more like a genuine paint pour.
+    if rescaling_exponent is None:
+        rescaling_exponent = 10 ** np.random.uniform(0.1, 3)
+    noise_field = log_rescaler(noise_field_unscaled, exponent=rescaling_exponent,show_plot=show_intermediate_plots)
+    if show_intermediate_plots is True:
+        fig, axs = plt.subplots(1, 2, figsize=(12, 5))
+        im0 = axs[0].imshow(noise_field_unscaled, origin='lower',cmap=cmap_base)
+        axs[0].set_title('Unscaled Noise Field')
+        plt.colorbar(im0, ax=axs[0], fraction=0.046, pad=0.04)
+        im1 = axs[1].imshow(noise_field, origin='lower',cmap=cmap_base)
+        axs[1].set_title('Scaled Noise Field')
+        plt.colorbar(im1, ax=axs[1], fraction=0.046, pad=0.04)
+        fig.tight_layout()
+        plt.show()
+
+    # Display a surface plot of your image, if desired.
+    if show_intermediate_plots:
+        y, x = np.meshgrid(np.arange(image_dimensions[0]), np.arange(image_dimensions[1]))
+        fig1, ax1 = plt.subplots(figsize=(8, 6), subplot_kw={"projection": "3d"})
+        surf = ax1.plot_surface(x, y, noise_field, cmap=cmap, linewidth=0, antialiased=False, rcount=100, ccount=100)
+        fig1.tight_layout()
+        print('\n\n')
+        if add_cells:
+            print('Gauss smoothing sigma = ', gauss_smoothing_sigma)
+            print('Threshold percentile = ', threshold_percentile)
+            print('Rescaling exponent =', rescaling_exponent)
+
+    # Display the final calculated image and save it if desired
+    # if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):
+    #     plt.ioff()
+    fig, ax = plt.subplots(1, figsize=(image_dimensions[0] / 120, image_dimensions[1] / 120)) # Ensure that the is displayed in its native resolution
+    ax = plt.Axes(fig, [0., 0., 1., 1.]) # Make the axes fill the entire figure
     fig.add_axes(ax)
     ax.imshow(noise_field, cmap=cmap, origin='lower', vmin=0, vmax=1)
-    if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):
-        plt.ion()
-
+    # if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):
+    #     plt.ion()
     if save_image:
-        filename = (
-            cmap.name + '_' + str(num_levels) + 'levels_' +
-            '_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]]) +
-            '_stretch' + str(stretch_value) +
-            '_exponent' + '{:.0f}'.format(rescaling_exponent)
-        )
+        filename = (cmap.name + '_' + str(num_levels) + 'levels_' + '_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]]) +
+            '_stretch' + str(stretch_value) + '_exponent' + '{:.0f}'.format(rescaling_exponent))
         if add_cells:
             filename += '_gausssmooth' + str(gauss_smoothing_sigma) + '_threshold' + str(threshold_percentile)
         filename += '_seed' + str(seed)
@@ -196,30 +187,46 @@ def generate_paint_pour_image(
         if not os.path.exists(output_directory_temp):
             os.makedirs(output_directory_temp)
         fig.savefig(output_directory_temp + filename + '.png', dpi=120)
-
-    if make_surface_plot:
-        y, x = np.meshgrid(np.arange(image_dimensions[0]), np.arange(image_dimensions[1]))
-        fig1, ax1 = plt.subplots(figsize=(8, 6), subplot_kw={"projection": "3d"})
-        surf = ax1.plot_surface(x, y, noise_field, cmap=cmap, linewidth=0, antialiased=False, rcount=50, ccount=50)
-        fig1.tight_layout()
-        print('\n\n')
-        if add_cells:
-            print('Gauss smoothing sigma = ', gauss_smoothing_sigma)
-            print('Threshold percentile = ', threshold_percentile)
-            print('Rescaling exponent =', rescaling_exponent)
-    if display_image is True:
+    if display_final_image is True:
         plt.show()
 
-def log_rescaler(y,exponent):
+def _log_rescale_helper(input_values, exponent):
     if exponent != 1:
-        y_rescaled = np.log10(exponent*y+1)/np.log10(exponent)
-        y_rescaled -= np.min(y_rescaled[y_rescaled != -np.inf])
-        y_rescaled /= y_rescaled.max()
+        rescaled_values = np.log10(exponent * input_values + 1) / np.log10(exponent)
+        rescaled_values -= np.min(rescaled_values[rescaled_values != -np.inf])
+        rescaled_values /= rescaled_values.max()
         if (exponent < 1) and (exponent > 0):
-            y_rescaled = abs(y_rescaled-1)
+            rescaled_values = abs(rescaled_values - 1)
     else:
-        y_rescaled = y.copy()
-    return y_rescaled  
+        rescaled_values = input_values.copy()
+    return rescaled_values
+
+def log_rescaler(input_values, exponent, show_plot=False):
+    """
+    Rescale input_values using a logarithmic transformation with the given exponent.
+    Optionally displays a plot of rescaled values vs input values.
+
+    Args:
+        input_values (np.ndarray): Array of values to rescale.
+        exponent (float): Exponent for the log rescaling.
+        show_plot (bool): If True, show a scatter plot of input vs rescaled values.
+
+    Returns:
+        rescaled_values: np.ndarray
+    """
+    rescaled_values = _log_rescale_helper(input_values, exponent)
+    if show_plot:
+        _x = np.linspace(0,1,100)
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.plot(_x, _log_rescale_helper(_x,exponent))
+        ax.set_xlabel('Input Values')
+        ax.set_ylabel('Rescaled Values')
+        ax.set_title(f'Log Rescaler (exponent={exponent:.1f})')
+        ax.set_xlim(0,1)
+        ax.set_ylim(0,1)
+        fig.tight_layout()
+        plt.show()
+    return rescaled_values
 
 #Rescale an array from 0-1 with a power law, just like you would do in DS9
 def power_rescaler(y,exponent):
@@ -374,6 +381,7 @@ def perlin_field(image_dimensions,octave,stretch,make_tileable=False, show_plots
         ax.set_title(f'Perlin Noise - Octave {octave}')
         ax.set_aspect('equal')
         plt.colorbar(im, ax=ax)
+        ax.grid(zorder=0,alpha=0.5)
         fig.tight_layout()
         plt.show()
 
@@ -399,14 +407,12 @@ def fractal_noise(image_dimensions, relative_powers, stretch, show_perlin_noise_
             image += relative_powers[i] * perlin_image  # Add that Perlin noise field to the total, with geometrically decreasing weighting.
 
     # Normalize the image to the range [0,1]
-    image -= np.min(image)
-    if np.max(image) > 0:
-        image /= np.max(image)
+    image = (image - np.min(image)) / (np.max(image) - np.min(image))
 
     if show_fractal_noise_plot:
         fig, ax = plt.subplots(figsize=(8, 6))
         im = ax.imshow(image, origin='lower')
-        ax.set_title(f'Fractal Noise\nRelative Powers={np.array(relative_powers)}, Stretch={stretch}')
+        ax.set_title(f'Fractal noise base image\nRelative Powers={np.array(relative_powers)}, Stretch={stretch}')
         ax.set_aspect('equal')
         plt.colorbar(im, ax=ax)
         fig.tight_layout()
@@ -537,10 +543,10 @@ def make_custom_colormap(colors=None,nodes=None,show_plot=False):
 
 def make_custom_segmented_colormap(colors=None,nodes=None,show_plot=False,cmap_name = 'custom'):
     print('...Making a custom segmented colormap')
-    #Colors = a list of tuples for colors you want your colormap to be composed of
+    #Colors = a list of tuples for colors you want your colormap to be composed of, in RGBA format.
     #Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
     #       -The first and last value must be 0 and 1, respectively.
-    #       -For example, if nodes = [0,0.5,1], your colormap will start at color[0], hit color[1] at the middle value, and reach color[2] at the max value
+    #       -For example, if nodes = [0, 0.4, 0.8, 1], the first 40% of your colormap will be color[0], the next 40% will be color[1], and the final 20% will be color[2]
     if colors is None:
         print('WARNING: No input colors specified. Picking some default values....')
         colors=[(1,0,0,1),(0,1,0,1),(0,0,1,1)]
@@ -548,16 +554,18 @@ def make_custom_segmented_colormap(colors=None,nodes=None,show_plot=False,cmap_n
         print('WARNING: No input nodes specified. Picking an evenly-spaced array....')
         nodes = np.linspace(0,1.0,len(colors)+1)  
         
-    #Because we're making a segmented colormap, we must duplicate each color in the colors array, as well as the inner noes of the nodes array
+    #Because we're making a segmented colormap, we must duplicate each color in the colors array, as well as the inner noes of the nodes array.
+    # This is because we must specify the color and value at each segment boundary
+    # For example, if nodes = [0, 0.4, 0.8, 1], then nodes_new = [0, 0.4, 0.4, 0.8, 0.8, 1]. 
     colors = [tuple(color[:-1]) for color in colors]
     colors_new = []
     nodes_new = []
     for i in range(len(colors)):
-        colors_new.append(colors[i])
-        colors_new.append(colors[i])
+        colors_new.extend([colors[i],colors[i]])
+        # colors_new.append(colors[i])
     for i in range(len(nodes)):
-        nodes_new.append(nodes[i])
-        nodes_new.append(nodes[i])
+        nodes_new.extend([nodes[i],nodes[i]])
+        # nodes_new.append(nodes[i])
     nodes_new = nodes_new[1:-1]
 
     cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes_new, colors_new)))
