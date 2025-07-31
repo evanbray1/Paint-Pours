@@ -18,7 +18,7 @@ def generate_paint_pour_images(image_dimensions, num_images=3, display_final_ima
         display_final_image (bool): Whether to display the image interactively.
         save_image (bool): Whether to save the image as a PNG file.
         show_intermediate_plots (bool): Show intermediate diagnostic plots.
-        add_cells (bool): Overlay Voronoi cell structure on the image.
+        add_cells (bool): Overlay Voronoi cell structure on the image. Experimental feature, currently. 
         cmap_name (str): Colormap to use ('any', 'custom', or a matplotlib colormap name).
         output_directory (str): Directory to save output images.
     """
@@ -69,7 +69,7 @@ def generate_paint_pour_image(
     save_image (bool): Whether to save the image as a PNG file.
     show_intermediate_plots (bool): Show intermediate diagnostic plots.
     make_surface_plot (bool): Show a 3D surface plot of the image.
-    add_cells (bool): Overlay Voronoi cell structure on the image.
+    add_cells (bool): Overlay Voronoi cell structure on the image. Currently an experinental feature.
     cmap_name (str): Colormap to use ('any', 'custom', or a matplotlib colormap name).
     output_directory (str): Directory to save output images.
 
@@ -84,6 +84,7 @@ def generate_paint_pour_image(
 
     # A fractal noise image is made by summing together multiple layers (octaves) of Perlin noise. What should the relative strength of the layers be?
     # Pick some values for the fractal noise parameters if they were not provided.
+    print('...Making fractal noise layer')
     if octave_powers is None:
         octave_powers = [1,
             np.round(np.random.uniform(0.1, 0.5), 1),
@@ -138,10 +139,10 @@ def generate_paint_pour_image(
     colors = np.random.randint(low=0, high=256, size=num_levels)
     nodes = np.sort(np.random.uniform(low=0, high=1, size=len(colors) - 1)) # The randomly-chosen boundaries at which the color segments will change
     cmap = make_custom_segmented_colormap(colors=cmap_base(colors),nodes=[0] + list(nodes) + [1],show_plot=show_intermediate_plots,cmap_name=cmap_base.name)
-    # cmap.set_over(cmap_base(np.random.uniform(low=0, high=1)))
 
     # Apply some logarithmic rescaling to the noise field. This adds variety in contour spacing, instead of them all being roughly even in thickness on the final image.
     # In my opinion, this makes the resulting contours look more like a genuine paint pour.
+    print('...Rescaling the noise field')
     if rescaling_exponent is None:
         rescaling_exponent = 10 ** np.random.uniform(0.1, 3)
     noise_field = log_rescaler(noise_field_unscaled, exponent=rescaling_exponent,show_plot=show_intermediate_plots)
@@ -151,7 +152,7 @@ def generate_paint_pour_image(
         axs[0].set_title('Unscaled Noise Field')
         plt.colorbar(im0, ax=axs[0], fraction=0.046, pad=0.04)
         im1 = axs[1].imshow(noise_field, origin='lower',cmap=cmap_base)
-        axs[1].set_title('Scaled Noise Field')
+        axs[1].set_title(f'Scaled Noise Field, exponent = {rescaling_exponent:.1f}')
         plt.colorbar(im1, ax=axs[1], fraction=0.046, pad=0.04)
         fig.tight_layout()
         plt.show()
@@ -169,6 +170,7 @@ def generate_paint_pour_image(
             print('Rescaling exponent =', rescaling_exponent)
 
     # Display the final calculated image and save it if desired
+    print('...Displaying the final processed image')
     # if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):
     #     plt.ioff()
     fig, ax = plt.subplots(1, figsize=(image_dimensions[0] / 120, image_dimensions[1] / 120)) # Ensure that the is displayed in its native resolution
@@ -381,7 +383,6 @@ def perlin_field(image_dimensions,octave,stretch,make_tileable=False, show_plots
         ax.set_title(f'Perlin Noise - Octave {octave}')
         ax.set_aspect('equal')
         plt.colorbar(im, ax=ax)
-        ax.grid(zorder=0,alpha=0.5)
         fig.tight_layout()
         plt.show()
 
@@ -395,7 +396,6 @@ def perlin_field(image_dimensions,octave,stretch,make_tileable=False, show_plots
 #Typically each octave gets multiplied by 1/(2^octave) before adding it to the master image array. 
 #However, here we replace 1/(2^octave) with "relative_power" which gets randomly chosen from an octave-dependent range of values.
 def fractal_noise(image_dimensions, relative_powers, stretch, show_perlin_noise_plots=False, show_fractal_noise_plot=False):
-    print('...Making fractal noise layer')
     num_octaves = len(relative_powers)
     image = np.zeros((image_dimensions[1], image_dimensions[0]))  # Define an empty array where we'll build the final image
     vectors = None
