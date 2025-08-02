@@ -16,7 +16,7 @@ import paint_pour_tools as pptools
 #TODO, add a way to overplot cell lines to the perlin noise images
 
 #########USER-DEFINED VARIABLES#########
-image_dimensions = [800,800]
+image_dimensions = [1920, 1080]
 
 display_final_image = True        #Do you want to display the image on the screen?
 save_image = True                 #Do you want to save a .png copy of your image?
@@ -38,5 +38,6 @@ pptools.generate_paint_pour_images(
     show_intermediate_plots=show_intermediate_plots,
     cmap_name=cmap_name,
     output_directory=output_directory,
-    seed=seed
+    seed=seed,
+    add_cells=False
 )

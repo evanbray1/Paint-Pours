@@ -130,39 +130,13 @@ def generate_paint_pour_image(
     noise_field_unscaled, vector_info = fractal_noise(image_dimensions, octave_powers, stretch_value, 
                                              show_fractal_noise_plot=show_intermediate_plots, show_perlin_noise_plots=show_intermediate_plots)
 
-    # TODO, flesh this part out more
-    if add_cells:
-        include_perimeter_regions = False
-        gauss_smoothing_sigma = 6
-        threshold_percentile = 70
-        cell_field = make_cell_image(image_dimensions,num_voronoi_points=800,gauss_smoothing_sigma=gauss_smoothing_sigma,
-            threshold_percentile=threshold_percentile,minimum_region_area=20,show_plots=show_intermediate_plots,
-            include_perimeter_regions=include_perimeter_regions)
-        area_with_cells_x, area_with_cells_y = [image_dimensions[0] / 2, image_dimensions[1] / 2]
-        area_with_cells_radius = 200
-        if show_intermediate_plots:
-            fig, ax = plt.subplots(1)
-            ax.imshow(cell_field, origin='lower')
-            area_with_cells = plt.Circle((area_with_cells_x, area_with_cells_y),area_with_cells_radius,fill=None,edgecolor='r',linewidth=3)
-            ax.add_patch(area_with_cells)
-            fig.tight_layout()
-        cell_field = remove_cells_outside_circular_region(cell_field,[area_with_cells_x, area_with_cells_y],area_with_cells_radius)
-        if show_intermediate_plots:
-            fig, ax = plt.subplots(1)
-            ax.imshow(cell_field, origin='lower', vmin=0, vmax=1)
-            area_with_cells = plt.Circle((area_with_cells_x, area_with_cells_y),area_with_cells_radius,fill=None,edgecolor='r', linewidth=3)
-            ax.add_patch(area_with_cells)
-            fig.tight_layout()
-        # ind = np.where(cell_field == 1) #Not sure what I put this here for originally. 
-        # noise_field[ind] = 1.01 
-
     # Make a colormap to use for this image
     if num_levels is None:
         num_levels = np.random.choice([30, 40, 50])
     if cmap_name == 'custom':
         cmap_base = make_custom_colormap(
             colors=['#33192F', '#803D75', '#CF2808', '#FEE16E', '#6AA886', '#5CE5FB', '#1A1941'],
-            show_plot=display_colormap)
+            show_plot=False)
     elif cmap_name == 'any':
         cmap_base = pick_random_colormap(show_plot=False)
     else:
@@ -192,6 +166,36 @@ def generate_paint_pour_image(
         fig.tight_layout()
         plt.show(block=False)
 
+    # Add some "cells" to the image, if desired, to simulate the effects of using silicon oil in an actual acryllic paint pour. 
+    if add_cells:
+        include_perimeter_regions = False
+        gauss_smoothing_sigma = 6
+        threshold_percentile = 70
+        cell_field = make_cell_image(image_dimensions,num_voronoi_points=400,show_plots=show_intermediate_plots, gauss_smoothing_sigma=gauss_smoothing_sigma,
+            threshold_percentile=threshold_percentile, include_perimeter_regions=include_perimeter_regions)
+        
+        # TODO, add the ability to remove cells outside a circular region.
+        # area_with_cells_x, area_with_cells_y = [image_dimensions[0] / 2, image_dimensions[1] / 2]
+        # area_with_cells_radius = 200
+        # if show_intermediate_plots:
+        #     fig, ax = plt.subplots(1)
+        #     ax.imshow(cell_field, origin='lower')
+        #     area_with_cells = plt.Circle((area_with_cells_x, area_with_cells_y),area_with_cells_radius,fill=None,edgecolor='r',linewidth=3)
+        #     ax.add_patch(area_with_cells)
+        #     fig.tight_layout()
+        # cell_field = remove_cells_outside_circular_region(cell_field,[area_with_cells_x, area_with_cells_y],area_with_cells_radius)
+        # if show_intermediate_plots:
+        #     fig, ax = plt.subplots(1)
+        #     ax.imshow(cell_field, origin='lower', vmin=0, vmax=1)
+        #     area_with_cells = plt.Circle((area_with_cells_x, area_with_cells_y),area_with_cells_radius,fill=None,edgecolor='r', linewidth=3)
+        #     ax.add_patch(area_with_cells)
+        #     fig.tight_layout()
+        ind = np.where(cell_field == 1) # Find the pixels that correspond to the Voronoi cells
+        noise_field[ind] = 1.01 # Set those pixels to a value slightly above 1 (the noise_field maximum), so they will use the custom cmap "over range" color. 
+
+        # Choose a random color from the base colormap and set it as the 'over' color for the segmented colormap. This is the color the cells will appear to be.
+        cmap.set_over(cmap_base(np.random.uniform(0,1)))
+
     # Display a surface plot of your image, if desired.
     if show_intermediate_plots:
         y, x = np.meshgrid(np.arange(image_dimensions[0]), np.arange(image_dimensions[1]))
@@ -202,18 +206,14 @@ def generate_paint_pour_image(
         if add_cells:
             print('Gauss smoothing sigma = ', gauss_smoothing_sigma)
             print('Threshold percentile = ', threshold_percentile)
-            print('Rescaling exponent =', rescaling_exponent)
+            print(f'Rescaling exponent = {rescaling_exponent:.1f}')
 
     # Display the final calculated image and save it if desired
     print('...Displaying the final processed image')
-    # if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):
-    #     plt.ioff()
     fig, ax = plt.subplots(1, figsize=(image_dimensions[0] / 120, image_dimensions[1] / 120)) # Ensure that the is displayed in its native resolution
     ax = plt.Axes(fig, [0., 0., 1., 1.]) # Make the axes fill the entire figure
     fig.add_axes(ax)
     ax.imshow(noise_field, cmap=cmap, origin='lower', vmin=0, vmax=1)
-    # if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):
-    #     plt.ion()
     if save_image:
         filename = (cmap.name + '_' + str(num_levels) + 'levels_' + '_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]]) +
             '_stretch' + str(stretch_value) + '_exponent' + '{:.0f}'.format(rescaling_exponent))
@@ -700,13 +700,11 @@ def remove_small_regions(image, size_threshold):
         Image with small regions removed.
     """
     print('...Removing cells smaller than '+str(int(size_threshold))+' pixels in area')
-    contours,hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[1:]
-    contour_areas = get_contour_pixel_areas(image, contours)
-    small_regions = np.where(contour_areas < size_threshold)[0]
-    # small_regions = small_regions[np.where(contour_areas < size_threshold)[0]]
+    contours,hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contour_areas = get_contour_pixel_areas(image, contours)    # Calculate the area in pixels of each contour in the image
+    small_regions = np.where(contour_areas < size_threshold)[0] # Identify the contours with an area smaller than the threshold
     
-    #Remove regions that are smaller than some threshold
-    # if len(small_regions > 0):
+    # Generate a new image comprised of just the small regions, and then XOR it with the original image to remove those regions.
     temp_image = np.zeros(image.shape,dtype=np.uint8)
     for i,region in enumerate(small_regions):
         temp_image = cv2.drawContours(temp_image,contours,contourIdx=region,color=1,thickness=-1)
@@ -867,23 +865,25 @@ def make_custom_segmented_colormap(colors=None, nodes=None, show_plot=False, cma
         fig_cmap.tight_layout()
     return cmap_custom
 
-def make_cell_image(image_dimensions, num_voronoi_points, gauss_smoothing_sigma, threshold_percentile, minimum_region_area,
+def make_cell_image(image_dimensions, num_voronoi_points=400, gauss_smoothing_sigma=6, threshold_percentile=70, minimum_cell_area=25,
                     show_plots=False, include_perimeter_regions=False):
     """
-    Produce a thresholded cell image using Voronoi diagrams and Gaussian smoothing.
+    Produce a thresholded cell image using Voronoi diagrams and Gaussian smoothing. 
+    Note that this function has a number of parameters that (currently) do not scale with image size. Default values are chosen such that they work well for a 1920x1080 image, 
+    but deviations from that image size may require some tweaking of the parameters to get a good result.
 
     Parameters
     ----------
     image_dimensions : list or tuple of int
         [width, height] in pixels for the output image.
     num_voronoi_points : int
-        Number of scatterpoints used to generate the Voronoi diagram.
+        Number of scatterpoints used to generate the Voronoi diagram. Higher number = more cells, in general.
     gauss_smoothing_sigma : float
-        Standard deviation for Gaussian smoothing (in pixels).
+        Standard deviation for Gaussian smoothing (in pixels). A larger number means rounder cells. 
     threshold_percentile : float
-        Percentile for thresholding the smoothed image.
-    minimum_region_area : int
-        Minimum area (in pixels) for regions to keep.
+        Percentile for thresholding the smoothed image. Thickness of the "webbing" between cells. Low number = thicker webbing
+    minimum_cell_area : int
+        Minimum area (in pixels) for cells to keep. 
     show_plots : bool, optional
         If True, display intermediate plots (default is False).
     include_perimeter_regions : bool, optional
@@ -895,16 +895,10 @@ def make_cell_image(image_dimensions, num_voronoi_points, gauss_smoothing_sigma,
         The final thresholded cell image.
     """
     print('...Producing a thresholded cell image')
-    #num_voronoi_points = number of scatterpoints used to generate the Voronoi diagram. Higher number = more cells, in general
-    #gauss_smoothing_sigma = In pixels, how "round" the corners of the cells are
-    #threshold_percentile = thickness of the webbing between cells. Low number = thicker webbing
-    #minimum_region_area = any cells with an area smaller than this (in pixels) will be removed
     vor = make_voronoi(num_voronoi_points,*image_dimensions)
 
-    # print('Making cell image!')
     #Convert the voronoi diagram ridges into (x,y) points
     x_new,y_new = voronoi_to_points(vor,1)
-    # print('Done converting into (x,y) points')
     
     #Remove points that fall outside of the region of interest
     good_indices = np.where((x_new > 0) & (x_new < image_dimensions[0]) & (y_new > 0) & (y_new < image_dimensions[1]))[0]
@@ -918,50 +912,50 @@ def make_cell_image(image_dimensions, num_voronoi_points, gauss_smoothing_sigma,
         ax.set_ylim(0,image_dimensions[1])
         ax.set_aspect('equal')
         ax.scatter(x_new,y_new,s=20)
+        ax.set_title('Original Voronoi diagram')
         fig.tight_layout()
     
-    #Take the (x,y) points and histogram them.
+    #Take the (x,y) points and histogram them. 
     image = np.histogram2d(x_new,y_new,bins=image_dimensions,range=[[0,image_dimensions[0]],[0,image_dimensions[1]]])[0].T
     if show_plots == True:
-        fig2,ax2 = plt.subplots(1,5,figsize=(18,5),sharey=True)
-        ax2[0].imshow(image,origin='lower')
-        ax2[0].set_title('Original Voronoi')
-    # print('Done histgramming')
+        fig2,ax2 = plt.subplots(2,3,figsize=(18,7),sharey=True)
+        ax2[0,0].imshow(image,origin='lower')
+        ax2[0,0].set_title('Histogrammed Voronoi webbing')
 
     #Apply some gaussian smoothing to the image
     image_proc = np.log10(image+.0001)
     image_proc = gaussian_filter(image_proc,gauss_smoothing_sigma)
     if show_plots == True:
-        ax2[1].imshow(image_proc,origin='lower')
-        ax2[1].set_title('imagemed + smoothed')
-        ax2[1].set_aspect('equal')
+        ax2[0,1].imshow(image_proc,origin='lower')
+        ax2[0,1].set_title('Gaussian smoothed')
+        ax2[0,1].set_aspect('equal')
     
     #Threshold the image
     image_threshold = np.zeros(image_proc.shape,dtype=np.uint8)
     image_threshold[image_proc < np.percentile(image_proc,threshold_percentile)] = 1
     if show_plots == True:    
-        ax2[2].imshow(image_threshold,origin='lower')
-        ax2[2].set_title('Threshold applied')
-        ax2[2].set_aspect('equal')
-    # print('Done thresholding')
+        ax2[0,2].imshow(image_threshold,origin='lower')
+        ax2[0,2].set_title('Threshold applied')
+        ax2[0,2].set_aspect('equal')
     
     if include_perimeter_regions == False:
         #Remove the regions that fall over the border
         image_final = remove_perimeter_regions(image_threshold)
         if show_plots == True:    
-            ax2[3].imshow(image_final,origin='lower')
-            ax2[3].set_title('Border regions removed')
-        # print('Done removing outer regions')
+            ax2[1,0].imshow(image_final,origin='lower')
+            ax2[1,0].set_title('Perimeter regions removed')
     else:
         image_final = image_threshold.copy()
         
     #Identify regions that are smaller in size than some threshold
-    image_final = remove_small_regions(image_final, minimum_region_area)
+    image_final = remove_small_regions(image_final, minimum_cell_area)
     if show_plots == True:    
-        ax2[4].imshow(image_final,origin='lower')
-        ax2[4].set_title('Small regions removed')
+        ax2[1,1].imshow(image_final,origin='lower')
+        ax2[1,1].set_title('Small cells removed')
         fig2.tight_layout()
-    # print('Done removing small regions')
+
+    # Normalize the final image to the range [0,1]
+    image_final = (image_final - np.min(image_final)) / (np.max(image_final) - np.min(image_final))
 
     return image_final
 
