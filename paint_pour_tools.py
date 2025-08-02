@@ -7,80 +7,109 @@ from scipy.ndimage import gaussian_filter
 import os
 import time
 
-def generate_paint_pour_images(image_dimensions, num_images=3, display_image=True, save_image=True, show_intermediate_plots=False, make_surface_plot=False, add_cells=False, display_colormap=False, cmap_name='any', output_directory='D:/Google Drive/Python Projects/Paint Pouring/Pictures/temp/'):
+def generate_paint_pour_images(image_dimensions, num_images=3, display_final_image=True, save_image=True, show_intermediate_plots=False, 
+                               add_cells=False, cmap_name='any', seed=None, output_directory='D:/Google Drive/Python Projects/Paint Pouring/Pictures/temp/'):
     """
-    Generate and optionally display or save paint pour images using fractal noise and custom colormaps.
+    Generate and optionally display or save multiple paint pour images using fractal noise and custom colormaps.
 
-    Args:
-        image_dimensions (list): [width, height] in pixels for the output image.
-        num_images (int): Number of images to generate.
-        display_image (bool): Whether to display the image interactively.
-        save_image (bool): Whether to save the image as a PNG file.
-        show_intermediate_plots (bool): Show intermediate diagnostic plots.
-        make_surface_plot (bool): Show a 3D surface plot of the image.
-        add_cells (bool): Overlay Voronoi cell structure on the image.
-        display_colormap (bool): Display the chosen colormap.
-        cmap_name (str): Colormap to use ('any', 'custom', or a matplotlib colormap name).
-        output_directory (str): Directory to save output images.
+    Parameters
+    ----------
+    image_dimensions : list of int
+        [width, height] in pixels for the output image.
+    num_images : int, optional
+        Number of images to generate (default is 3).
+    display_final_image : bool, optional
+        Whether to display the image (default is True).
+    save_image : bool, optional
+        Whether to save the image as a PNG file (default is True).
+    show_intermediate_plots : bool, optional
+        Show intermediate diagnostic plots (default is False).
+    add_cells : bool, optional
+        Overlay Voronoi cell structure on the image (default is False).
+    cmap_name : str, optional
+        Colormap to use ('any', 'custom', or a matplotlib colormap name; default is 'any').
+    seed : int or None, optional
+        Random seed for reproducibility (default is None).
+    output_directory : str, optional
+        Directory to save output images (default is a temp folder).
+
+    Returns
+    -------
+    None
     """
     start_time = time.time() # Start the timer to measure elapsed time
     # If the image to be displayed is too large (larger than your monitor's resolution, force interactive mode off. Otherwise some strange things can happen.
-    if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080) or not display_image:
-        plt.ioff()
-    else:
-        plt.ion()
-
-    # Generate some arrays to hold the x and y coordinates for the image grid
-    # x, y = [np.arange(image_dimensions[0]), np.arange(image_dimensions[1])]
-    # x, y = np.meshgrid(x, y)
+    # if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080) or not display_final_image:
+    #     plt.ioff()
+    # else:
+    #     plt.ion()
 
     for i in range(num_images):
-        plt.close('all')
+        plt.close('all') # Close all existing plots before starting a new image
         print('Currently making image ', i+1, ' of ', num_images)
         # Call the new function in the loop
         generate_paint_pour_image(
             image_dimensions=image_dimensions,
-            display_image=display_image,
+            display_final_image=display_final_image,
             save_image=save_image,
             show_intermediate_plots=show_intermediate_plots,
-            make_surface_plot=make_surface_plot,
             add_cells=add_cells,
-            display_colormap=display_colormap,
             cmap_name=cmap_name,
-            output_directory=output_directory)
+            output_directory=output_directory, 
+            seed=seed)
 
-    end_time = time.time()
-    elapsed_time = round(end_time - start_time, 2)
-    print('Elapsed Time: ' + str(elapsed_time) + ' seconds')
+        end_time = time.time()
+        elapsed_time = round(end_time - start_time, 2)
+        print('Elapsed Time: ' + str(elapsed_time) + ' seconds')
 
 def generate_paint_pour_image(
         image_dimensions,
-        display_image=True,
+        display_final_image=True,
         save_image=True,
         show_intermediate_plots=False,
-        make_surface_plot=False,
         add_cells=False,
-        display_colormap=False,
         cmap_name='any',
         output_directory='D:/Google Drive/Python Projects/Paint Pouring/Pictures/temp/', 
-        seed=None
+        seed=None,
+        octave_powers=None,
+        stretch_value=None,
+        rescaling_exponent=None,
+        num_levels=None
     ):
     """
     Generate a single paint pour image using fractal noise, custom colormaps, and optional Voronoi cell overlays.
 
-    Args:
-    image_dimensions (list): [width, height] in pixels for the output image.
-    display_image (bool): Whether to display the image interactively.
-    save_image (bool): Whether to save the image as a PNG file.
-    show_intermediate_plots (bool): Show intermediate diagnostic plots.
-    make_surface_plot (bool): Show a 3D surface plot of the image.
-    add_cells (bool): Overlay Voronoi cell structure on the image.
-    display_colormap (bool): Display the chosen colormap.
-    cmap_name (str): Colormap to use ('any', 'custom', or a matplotlib colormap name).
-    output_directory (str): Directory to save output images.
+    Parameters
+    ----------
+    image_dimensions : list of int
+        [width, height] in pixels for the output image.
+    display_final_image : bool, optional
+        Whether to display the image interactively (default is True).
+    save_image : bool, optional
+        Whether to save the image as a PNG file (default is True).
+    show_intermediate_plots : bool, optional
+        Show intermediate diagnostic plots (default is False).
+    add_cells : bool, optional
+        Overlay Voronoi cell structure on the image (default is False).
+    cmap_name : str, optional
+        Colormap to use ('any', 'custom', or a matplotlib colormap name; default is 'any').
+    output_directory : str, optional
+        Directory to save output images (default is a temp folder).
+    seed : int or None, optional
+        Random seed for reproducibility (default is None).
+    octave_powers : list or None, optional
+        Relative strengths of each Perlin noise octave. If None, then sensible values will be randomly chosen. (default is None).
+    stretch_value : int or None, optional
+        Stretch factor for grid shape. If None, then a sensible value will be randomly chosen. (default is None).
+    rescaling_exponent : float or None, optional
+        Exponent for log rescaling. If None, then a sensible value will be randomly chosen. (default is None).
+    num_levels : int or None, optional
+        Number of color levels in the colormap. If None, then a sensible value will be randomly chosen. (default is None).
 
-    Returns:
-    None
+    Returns
+    -------
+    noise_field : array
+        The generated paint pour image as a 2D numpy array.
     """
     if seed is None:
         # Generate a random seed if not provided
@@ -88,107 +117,106 @@ def generate_paint_pour_image(
         seed = np.random.randint(1, int(1e8))
         np.random.seed(seed)
 
-    octave_powers = [
-        1,
-        np.round(np.random.uniform(0.1, 0.5), 1),
-        np.round(np.random.uniform(0.0, 0.1), 2),
-        np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])
-    ]
-    stretch_value = np.random.randint(-2, 3)
-    noise_field, vector_info = fractal_noise(image_dimensions, octave_powers, stretch_value, 
+    # A fractal noise image is made by summing together multiple layers (octaves) of Perlin noise. What should the relative strength of the layers be?
+    # Pick some values for the fractal noise parameters if they were not provided.
+    print('...Making fractal noise layer')
+    if octave_powers is None:
+        octave_powers = [1,
+            np.round(np.random.uniform(0.1, 0.5), 1),
+            np.round(np.random.uniform(0.0, 0.1), 2),
+            np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])]
+    if stretch_value is None:
+        stretch_value = np.random.randint(-2, 3)
+    noise_field_unscaled, vector_info = fractal_noise(image_dimensions, octave_powers, stretch_value, 
                                              show_fractal_noise_plot=show_intermediate_plots, show_perlin_noise_plots=show_intermediate_plots)
-    noise_field = (noise_field - np.min(noise_field)) / (np.max(noise_field) - np.min(noise_field))
 
-    if add_cells:
-        include_perimeter_regions = False
-        gauss_smoothing_sigma = 6
-        threshold_percentile = 70
-        cell_field = make_cell_image(
-            image_dimensions,
-            num_voronoi_points=800,
-            gauss_smoothing_sigma=gauss_smoothing_sigma,
-            threshold_percentile=threshold_percentile,
-            minimum_region_area=20,
-            show_plots=show_intermediate_plots,
-            include_perimeter_regions=include_perimeter_regions
-        )
-        area_with_cells_x, area_with_cells_y = [image_dimensions[0] / 2, image_dimensions[1] / 2]
-        area_with_cells_radius = 200
-        if show_intermediate_plots:
-            fig, ax = plt.subplots(1)
-            ax.imshow(cell_field, origin='lower')
-            area_with_cells = plt.Circle(
-                (area_with_cells_x, area_with_cells_y),
-                area_with_cells_radius,
-                fill=None,
-                edgecolor='r',
-                linewidth=3
-            )
-            ax.add_patch(area_with_cells)
-            fig.tight_layout()
-        cell_field = remove_cells_outside_circular_region(
-            cell_field,
-            [area_with_cells_x, area_with_cells_y],
-            area_with_cells_radius
-        )
-        if show_intermediate_plots:
-            fig, ax = plt.subplots(1)
-            ax.imshow(cell_field, origin='lower', vmin=0, vmax=1)
-            area_with_cells = plt.Circle(
-                (area_with_cells_x, area_with_cells_y),
-                area_with_cells_radius,
-                fill=None,
-                edgecolor='r',
-                linewidth=3
-            )
-            ax.add_patch(area_with_cells)
-            fig.tight_layout()
-        ind = np.where(cell_field == 1)
-        noise_field[ind] = 1.01
-
-    rescaling_exponent = 10 ** np.random.uniform(0.1, 3)
-    noise_field = log_rescaler(noise_field, exponent=rescaling_exponent)
-
-    num_levels = np.random.choice([30, 40, 50])
-
+    # Make a colormap to use for this image
+    if num_levels is None:
+        num_levels = np.random.choice([30, 40, 50])
     if cmap_name == 'custom':
         cmap_base = make_custom_colormap(
             colors=['#33192F', '#803D75', '#CF2808', '#FEE16E', '#6AA886', '#5CE5FB', '#1A1941'],
-            show_plot=display_colormap
-        )
+            show_plot=False)
     elif cmap_name == 'any':
         cmap_base = pick_random_colormap(show_plot=False)
     else:
         cmap_base = plt.cm.get_cmap(cmap_name)
-    if display_colormap:
-        plot_colormap(cmap_base, title='Your specified base colormap, ' + cmap_base.name)
+    if show_intermediate_plots:
+        plot_colormap(cmap_base, title='Your base colormap, ' + cmap_base.name)
 
+    # Select 'num_levels' random colors from the base colormap and create a segmented colormap from these colors
     colors = np.random.randint(low=0, high=256, size=num_levels)
-    nodes = np.sort(np.random.uniform(low=0, high=1, size=len(colors) - 1))
-    cmap = make_custom_segmented_colormap(
-        colors=cmap_base(colors),
-        nodes=[0] + list(nodes) + [1],
-        show_plot=display_colormap,
-        cmap_name=cmap_base.name
-    )
-    cmap.set_over(cmap_base(np.random.uniform(low=0, high=1)))
+    nodes = np.sort(np.random.uniform(low=0, high=1, size=len(colors) - 1)) # The randomly-chosen boundaries at which the color segments will change
+    cmap = make_custom_segmented_colormap(colors=cmap_base(colors),nodes=[0] + list(nodes) + [1],show_plot=show_intermediate_plots,cmap_name=cmap_base.name)
 
-    if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):
-        plt.ioff()
-    fig, ax = plt.subplots(1, figsize=(image_dimensions[0] / 120, image_dimensions[1] / 120))
-    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    # Apply some logarithmic rescaling to the noise field. This adds variety in contour spacing, instead of them all being roughly even in thickness on the final image.
+    # In my opinion, this makes the resulting contours look more like a genuine paint pour.
+    print('...Applying a custom rescaling to the noise field')
+    if rescaling_exponent is None:
+        rescaling_exponent = 10 ** np.random.uniform(0.1, 3)
+    noise_field = log_rescaler(noise_field_unscaled, exponent=rescaling_exponent,show_plot=show_intermediate_plots)
+    if show_intermediate_plots is True:
+        fig, axs = plt.subplots(1, 2, figsize=(12, 5))
+        im0 = axs[0].imshow(noise_field_unscaled, origin='lower',cmap=cmap_base)
+        axs[0].set_title('Unscaled Noise Field')
+        plt.colorbar(im0, ax=axs[0], fraction=0.046, pad=0.04)
+        im1 = axs[1].imshow(noise_field, origin='lower',cmap=cmap_base)
+        axs[1].set_title(f'Scaled Noise Field, exponent = {rescaling_exponent:.1f}')
+        plt.colorbar(im1, ax=axs[1], fraction=0.046, pad=0.04)
+        fig.tight_layout()
+        plt.show(block=False)
+
+    # Add some "cells" to the image, if desired, to simulate the effects of using silicon oil in an actual acryllic paint pour. 
+    if add_cells:
+        include_perimeter_regions = False
+        gauss_smoothing_sigma = 6
+        threshold_percentile = 70
+        cell_field = make_cell_image(image_dimensions,num_voronoi_points=400,show_plots=show_intermediate_plots, gauss_smoothing_sigma=gauss_smoothing_sigma,
+            threshold_percentile=threshold_percentile, include_perimeter_regions=include_perimeter_regions)
+        
+        # TODO, add the ability to remove cells outside a circular region.
+        # area_with_cells_x, area_with_cells_y = [image_dimensions[0] / 2, image_dimensions[1] / 2]
+        # area_with_cells_radius = 200
+        # if show_intermediate_plots:
+        #     fig, ax = plt.subplots(1)
+        #     ax.imshow(cell_field, origin='lower')
+        #     area_with_cells = plt.Circle((area_with_cells_x, area_with_cells_y),area_with_cells_radius,fill=None,edgecolor='r',linewidth=3)
+        #     ax.add_patch(area_with_cells)
+        #     fig.tight_layout()
+        # cell_field = remove_cells_outside_circular_region(cell_field,[area_with_cells_x, area_with_cells_y],area_with_cells_radius)
+        # if show_intermediate_plots:
+        #     fig, ax = plt.subplots(1)
+        #     ax.imshow(cell_field, origin='lower', vmin=0, vmax=1)
+        #     area_with_cells = plt.Circle((area_with_cells_x, area_with_cells_y),area_with_cells_radius,fill=None,edgecolor='r', linewidth=3)
+        #     ax.add_patch(area_with_cells)
+        #     fig.tight_layout()
+        ind = np.where(cell_field == 1) # Find the pixels that correspond to the Voronoi cells
+        noise_field[ind] = 1.01 # Set those pixels to a value slightly above 1 (the noise_field maximum), so they will use the custom cmap "over range" color. 
+
+        # Choose a random color from the base colormap and set it as the 'over' color for the segmented colormap. This is the color the cells will appear to be.
+        cmap.set_over(cmap_base(np.random.uniform(0,1)))
+
+    # Display a surface plot of your image, if desired.
+    if show_intermediate_plots:
+        y, x = np.meshgrid(np.arange(image_dimensions[0]), np.arange(image_dimensions[1]))
+        fig1, ax1 = plt.subplots(figsize=(8, 6), subplot_kw={"projection": "3d"})
+        surf = ax1.plot_surface(x, y, noise_field, cmap=cmap, linewidth=0, antialiased=False, rcount=100, ccount=100)
+        fig1.tight_layout()
+        print('\n\n')
+        if add_cells:
+            print('Gauss smoothing sigma = ', gauss_smoothing_sigma)
+            print('Threshold percentile = ', threshold_percentile)
+            print(f'Rescaling exponent = {rescaling_exponent:.1f}')
+
+    # Display the final calculated image and save it if desired
+    print('...Displaying the final processed image')
+    fig, ax = plt.subplots(1, figsize=(image_dimensions[0] / 120, image_dimensions[1] / 120)) # Ensure that the is displayed in its native resolution
+    ax = plt.Axes(fig, [0., 0., 1., 1.]) # Make the axes fill the entire figure
     fig.add_axes(ax)
     ax.imshow(noise_field, cmap=cmap, origin='lower', vmin=0, vmax=1)
-    if (image_dimensions[0] > 1920) or (image_dimensions[1] > 1080):
-        plt.ion()
-
     if save_image:
-        filename = (
-            cmap.name + '_' + str(num_levels) + 'levels_' +
-            '_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]]) +
-            '_stretch' + str(stretch_value) +
-            '_exponent' + '{:.0f}'.format(rescaling_exponent)
-        )
+        filename = (cmap.name + '_' + str(num_levels) + 'levels_' + '_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]]) +
+            '_stretch' + str(stretch_value) + '_exponent' + '{:.0f}'.format(rescaling_exponent))
         if add_cells:
             filename += '_gausssmooth' + str(gauss_smoothing_sigma) + '_threshold' + str(threshold_percentile)
         filename += '_seed' + str(seed)
@@ -196,33 +224,87 @@ def generate_paint_pour_image(
         if not os.path.exists(output_directory_temp):
             os.makedirs(output_directory_temp)
         fig.savefig(output_directory_temp + filename + '.png', dpi=120)
+    if display_final_image is True:
+        plt.show(block=False)
 
-    if make_surface_plot:
-        y, x = np.meshgrid(np.arange(image_dimensions[0]), np.arange(image_dimensions[1]))
-        fig1, ax1 = plt.subplots(figsize=(8, 6), subplot_kw={"projection": "3d"})
-        surf = ax1.plot_surface(x, y, noise_field, cmap=cmap, linewidth=0, antialiased=False, rcount=50, ccount=50)
-        fig1.tight_layout()
-        print('\n\n')
-        if add_cells:
-            print('Gauss smoothing sigma = ', gauss_smoothing_sigma)
-            print('Threshold percentile = ', threshold_percentile)
-            print('Rescaling exponent =', rescaling_exponent)
-    if display_image is True:
-        plt.show()
+    return noise_field
 
-def log_rescaler(y,exponent):
+def _log_rescale_helper(input_values, exponent):
+    """
+    Helper function to rescale input values using a logarithmic transformation.
+
+    Parameters
+    ----------
+    input_values : np.ndarray
+        Array of values to rescale.
+    exponent : float
+        Exponent for the log rescaling.
+
+    Returns
+    -------
+    rescaled_values : np.ndarray
+        Logarithmically rescaled values.
+    """
     if exponent != 1:
-        y_rescaled = np.log10(exponent*y+1)/np.log10(exponent)
-        y_rescaled -= np.min(y_rescaled[y_rescaled != -np.inf])
-        y_rescaled /= y_rescaled.max()
+        rescaled_values = np.log10(exponent * input_values + 1) / np.log10(exponent)
+        rescaled_values -= np.min(rescaled_values[rescaled_values != -np.inf])
+        rescaled_values /= rescaled_values.max()
         if (exponent < 1) and (exponent > 0):
-            y_rescaled = abs(y_rescaled-1)
+            rescaled_values = abs(rescaled_values - 1)
     else:
-        y_rescaled = y.copy()
-    return y_rescaled  
+        rescaled_values = input_values.copy()
+    return rescaled_values
+
+def log_rescaler(input_values, exponent, show_plot=False):
+    """
+    Rescale input values using a logarithmic transformation with the given exponent.
+    Optionally displays a plot of rescaled values vs input values.
+
+    Parameters
+    ----------
+    input_values : np.ndarray
+        Array of values to rescale.
+    exponent : float
+        Exponent for the log rescaling.
+    show_plot : bool, optional
+        If True, show a plot of input vs rescaled values (default is False).
+
+    Returns
+    -------
+    rescaled_values : np.ndarray
+        Logarithmically rescaled values.
+    """
+    rescaled_values = _log_rescale_helper(input_values, exponent)
+    if show_plot:
+        _x = np.linspace(0,1,100)
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.plot(_x, _log_rescale_helper(_x,exponent))
+        ax.set_xlabel('Input Values')
+        ax.set_ylabel('Rescaled Values')
+        ax.set_title(f'Log Rescaler (exponent={exponent:.1f})')
+        ax.set_xlim(0,1)
+        ax.set_ylim(0,1)
+        fig.tight_layout()
+        plt.show(block=False)
+    return rescaled_values
 
 #Rescale an array from 0-1 with a power law, just like you would do in DS9
 def power_rescaler(y,exponent):
+    """
+    Rescale an array from 0-1 with a power law transformation.
+
+    Parameters
+    ----------
+    y : np.ndarray
+        Array of values to rescale.
+    exponent : float
+        Exponent for the power law rescaling (must be >= 1).
+
+    Returns
+    -------
+    y_rescaled : np.ndarray
+        Power-law rescaled values.
+    """
     if exponent < 1:
         print('WARNING, exponent must be >=1')
         os.sys.exit()
@@ -231,18 +313,54 @@ def power_rescaler(y,exponent):
     y_rescaled /= y_rescaled.max()
     return y_rescaled  
 
-#Define a function for interpolating between two points, which we do a lot here. This is a convenient one because it doesn't have "kinks" at the endpoints like a linear interpolation function would.
+#Define a function for interpolating between two points, which we do a lot here. This is a convenient function because it doesn't have "kinks" at the endpoints like a linear interpolation function would.
 #https://en.wikipedia.org/wiki/Smoothstep
 # @njit(parallel=True,fastmath=True)   #Like magic, the @njit bit makes the below function run faster by converting it into machine code.
 def smootherstep_function(x):
+    """
+    Compute the smootherstep interpolation for input x.
+
+    Parameters
+    ----------
+    x : np.ndarray or float
+        Input value(s) for interpolation.
+
+    Returns
+    -------
+    result : np.ndarray or float
+        Interpolated value(s) using the smootherstep formula.
+    """
     return 6*x**5-15*x**4+10*x**3
 
 #You should really read the Wikipedia page on Perlin Noise before trying to dissect this function. (https://en.wikipedia.org/wiki/Perlin_noise#Algorithm_detail)
-#Seriously, this part is complicated and took a lot of iterations, linear algebra, and troubleshooting. I would just take it at face value.
+#Seriously, this part is complicated and took a lot of iterations, linear algebra, and troubleshooting. I would just take it at face value if you're not an expert.
 #Maybe watch my earlier "How It's Done" video, too...
 def perlin_field(image_dimensions,octave,stretch,make_tileable=False, show_plots=False):
+    """
+    Generate a Perlin noise field for a given image size and octave.
+
+    Parameters
+    ----------
+    image_dimensions : list or tuple of int
+        The [width, height] of the output image in pixels.
+    octave : int
+        The octave number (controls grid density).
+    stretch : int
+        Stretch factor for grid shape (positive: more columns, negative: more rows).
+    make_tileable : bool, optional
+        If True, makes the noise field tileable (default is False).
+    show_plots : bool, optional
+        If True, displays the generated Perlin noise image with colorbar and grid lines (default is False).
+
+    Returns
+    -------
+    image : np.ndarray
+        The generated Perlin noise image, normalized to [0, 1].
+    vector_info : list
+        List containing vector grid coordinates and directions used for noise generation.
+    """
     
-    #Break the image field up into a grid of NxM "cells". Where N,M are defined by the current "octave" and "stretch" parameters.
+    #Break the image field up into a grid of NxM (width x height) vertices. Where N,M are defined by the current "octave" and "stretch" parameters. The squares between these vertices shall be referred to as "cells". 
     #The stretch parameter will add more cells in the x or y direction, depending on whether it is positive or negative and it cause the appearnce to be "stretched" like it was rendered for a different resolution and then stretched to fit the desired one.
     #Stretch must be an integer and adds either columns (positive) or rows (negative).
     #The 0th octave will ALWAYS be a 2x2 grid.
@@ -358,7 +476,8 @@ def perlin_field(image_dimensions,octave,stretch,make_tileable=False, show_plots
             
     #Calculate the Perlin noise image by calculating the weighted average of all the individual slices of the dot product array
     image = weights[:,:,0]*dot_products[:,:,0]+weights[:,:,1]*dot_products[:,:,1]+weights[:,:,2]*dot_products[:,:,2]+weights[:,:,3]*dot_products[:,:,3]
-    
+    # image = np.sum(dot_products,axis=2) # Uncomment this line to show what the noise field looks like without any interpolation. It will look very blocky and illustrate the "cell" structure. 
+
     #For the 0th octave case, we have to trim the center [image_dimensions] pixels out, because the 0th octave noise is twice as large in both the x- and y-directions.
     if octave == 0:
         image = image[int(image_dimensions[1]/2):int(image_dimensions[1]+image_dimensions[1]/2),int(image_dimensions[0]/2):int(image_dimensions[0]+image_dimensions[0]/2)]
@@ -374,8 +493,18 @@ def perlin_field(image_dimensions,octave,stretch,make_tileable=False, show_plots
         ax.set_title(f'Perlin Noise - Octave {octave}')
         ax.set_aspect('equal')
         plt.colorbar(im, ax=ax)
+        if octave > 0:
+            # Draw a grid of lines to indicate the cell boundaries for this octave
+            for x in vector_coords_x:
+                ax.axvline(x=x, color='black', linewidth=1, alpha=0.5)
+            for y in vector_coords_y:
+                ax.axhline(y=y, color='black', linewidth=1, alpha=0.5)
+        ax.set_xlim(0, image_dimensions[0])
+        ax.set_ylim(0, image_dimensions[1])
+
+
         fig.tight_layout()
-        plt.show()
+        plt.show(block=False)
 
     #Save some handy diagnostic info about the random vectors used to create this particular Perlin noise image
     vector_info = [vector_coords_x, vector_coords_y, vector_dir_x, vector_dir_y]
@@ -383,45 +512,102 @@ def perlin_field(image_dimensions,octave,stretch,make_tileable=False, show_plots
     return image.astype('float32'), vector_info
 
 #Fractal noise is just multiple layers (octaves) of Perlin noise added on top of one another.
-#This function works by calling the Perlin_field function multiple times, each time with a different octave, and adding the result to a master image array
-#Typically each octave gets multiplied by 1/(2^octave) before adding it to the master image array. 
-#However, here we replace 1/(2^octave) with "relative_power" which gets randomly chosen from an octave-dependent range of values.
+
 def fractal_noise(image_dimensions, relative_powers, stretch, show_perlin_noise_plots=False, show_fractal_noise_plot=False):
-    print('...Making fractal noise layer')
+    """
+    Generate a fractal noise image by summing multiple Perlin noise octaves.
+
+    This function works by calling the Perlin_field function multiple times, each time with a different octave, and adding the result to a master image array
+    Typically each octave gets multiplied by 1/(2^octave) before adding it to the master image array. 
+    However, here we replace 1/(2^octave) with "relative_power" to allow the user to tweak the intensity of different spatial scales.
+
+    Parameters
+    ----------
+    image_dimensions : list or tuple of int
+        The [width, height] of the output image in pixels.
+    relative_powers : list of float
+        Relative strengths of each Perlin noise octave.
+    stretch : int
+        Stretch factor for grid shape (positive: more columns, negative: more rows).
+    show_perlin_noise_plots : bool, optional
+        If True, display Perlin noise plots for each octave (default is False).
+    show_fractal_noise_plot : bool, optional
+        If True, display the final fractal noise image (default is False).
+
+    Returns
+    -------
+    image : np.ndarray
+        The generated fractal noise image, normalized to [0, 1].
+    vectors : list
+        List containing vector grid coordinates and directions from the last octave.
+    """
     num_octaves = len(relative_powers)
     image = np.zeros((image_dimensions[1], image_dimensions[0]))  # Define an empty array where we'll build the final image
     vectors = None
 
     # Calculate multiple Perlin noise fields. Each one is twice as dense as the last.
     for i in range(num_octaves):
+        print(f'\t Making octave {i} of {num_octaves}')
         if relative_powers[i] > 0:  # No point in expending the computer's time to calculate a Perlin noise field if the relative power is 0.
             perlin_image, vectors = perlin_field(image_dimensions, i, stretch, show_plots=show_perlin_noise_plots)
             image += relative_powers[i] * perlin_image  # Add that Perlin noise field to the total, with geometrically decreasing weighting.
 
     # Normalize the image to the range [0,1]
-    image -= np.min(image)
-    if np.max(image) > 0:
-        image /= np.max(image)
+    image = (image - np.min(image)) / (np.max(image) - np.min(image))
 
     if show_fractal_noise_plot:
         fig, ax = plt.subplots(figsize=(8, 6))
         im = ax.imshow(image, origin='lower')
-        ax.set_title(f'Fractal Noise\nRelative Powers={np.array(relative_powers)}, Stretch={stretch}')
+        ax.set_title(f'Fractal noise base image\nRelative Powers={np.array(relative_powers)}, Stretch={stretch}')
         ax.set_aspect('equal')
         plt.colorbar(im, ax=ax)
         fig.tight_layout()
-        plt.show()
+        plt.show(block=False)
 
     return image.astype('float32'), vectors
 
-def make_voronoi(npoints,width,height):
+def make_voronoi(npoints, width, height):
+    """
+    Generate a Voronoi diagram from random points within a given width and height.
+
+    Parameters
+    ----------
+    npoints : int
+        Number of random points to generate.
+    width : int
+        Width of the region.
+    height : int
+        Height of the region.
+
+    Returns
+    -------
+    vor : Voronoi
+        Voronoi diagram object.
+    """
     print('...Making Voronoi object')
     x = np.random.uniform(0,width,npoints)
     y = np.random.uniform(0,height,npoints)
     points = np.array(list(zip(x,y)))
     return Voronoi(points)
 
-def voronoi_to_points(voronoi,spacing):
+def voronoi_to_points(voronoi, spacing):
+    """
+    Convert Voronoi diagram ridges to a series of (x, y) points with specified spacing.
+
+    Parameters
+    ----------
+    voronoi : Voronoi
+        Voronoi diagram object.
+    spacing : float
+        Spacing between points along each ridge.
+
+    Returns
+    -------
+    x : np.ndarray
+        Array of x-coordinates of points.
+    y : np.ndarray
+        Array of y-coordinates of points.
+    """
     print('...Converting Voronoi object to discrete points')
     #Converts the lines of a Voronoi object to a series of (x,y) points with a spacing = "spacing".
     ridge_points = np.empty((0, 2), float)
@@ -450,6 +636,19 @@ def voronoi_to_points(voronoi,spacing):
     return ridge_points[:, 0], ridge_points[:, 1]
 
 def remove_perimeter_regions(thresholded_image):
+    """
+    Remove regions in a thresholded image that fall partially outside the image border.
+
+    Parameters
+    ----------
+    thresholded_image : np.ndarray
+        Binary image with thresholded regions.
+
+    Returns
+    -------
+    trimmed_image : np.ndarray
+        Image with border regions removed.
+    """
     print('...Removing cells that fall partially outside image')
     image_with_border = cv2.copyMakeBorder(thresholded_image,1,1,1,1,cv2.BORDER_CONSTANT,value=1)
     flooded_image = cv2.floodFill(image_with_border,None,(0,0),0)[1]
@@ -457,7 +656,22 @@ def remove_perimeter_regions(thresholded_image):
     trimmed_image = flooded_image[1:h-1,1:w-1]
     return trimmed_image
 
-def get_contour_pixel_areas(image,list_of_contours):
+def get_contour_pixel_areas(image, list_of_contours):
+    """
+    Calculate the area (in pixels) of each contour in an image.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Binary image.
+    list_of_contours : list
+        List of contour arrays.
+
+    Returns
+    -------
+    areas : np.ndarray
+        Array of pixel areas for each contour.
+    """
     print('...Calculating area of cells')
     #Determine the areas of the various closed contours in an image
     height,width = image.shape
@@ -469,24 +683,52 @@ def get_contour_pixel_areas(image,list_of_contours):
         areas.append(contour_area)
     return np.array(areas)
 
-def remove_small_regions(image,size_threshold):
+def remove_small_regions(image, size_threshold):
+    """
+    Remove regions in a binary image smaller than a given pixel area threshold.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Binary image.
+    size_threshold : int
+        Minimum area (in pixels) for regions to keep.
+
+    Returns
+    -------
+    final_image : np.ndarray
+        Image with small regions removed.
+    """
     print('...Removing cells smaller than '+str(int(size_threshold))+' pixels in area')
-    contours,hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[1:]
-    contour_areas = get_contour_pixel_areas(image, contours)
-    small_regions = np.where(contour_areas < size_threshold)[0]
-    # small_regions = small_regions[np.where(contour_areas < size_threshold)[0]]
+    contours,hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contour_areas = get_contour_pixel_areas(image, contours)    # Calculate the area in pixels of each contour in the image
+    small_regions = np.where(contour_areas < size_threshold)[0] # Identify the contours with an area smaller than the threshold
     
-    #Remove regions that are smaller than some threshold
-    # if len(small_regions > 0):
+    # Generate a new image comprised of just the small regions, and then XOR it with the original image to remove those regions.
     temp_image = np.zeros(image.shape,dtype=np.uint8)
     for i,region in enumerate(small_regions):
         temp_image = cv2.drawContours(temp_image,contours,contourIdx=region,color=1,thickness=-1)
     final_image = cv2.bitwise_xor(temp_image,image)  
     return final_image
 
-def pick_random_colormap(print_choice=False,show_plot=False):
+def pick_random_colormap(print_choice=False, show_plot=False):
+    """
+    Pick a random colormap from matplotlib, avoiding a list of colormaps that the author finds visually unappealing.
+
+    Parameters
+    ----------
+    print_choice : bool, optional
+        If True, print the chosen colormap name (default is False).
+    show_plot : bool, optional
+        If True, display the chosen colormap (default is False).
+
+    Returns
+    -------
+    cmap : Colormap
+        The randomly chosen matplotlib colormap.
+    """
     print('...Picking random colormap')
-    #Some colormaps are just bad looking for this kind of art, IMO. I list them here so I can make sure to avoid them during the random-picking process later.
+    #Some colormaps are just bad looking for this kind of art. I list them here so they will be avoided during the random-picking process.
     bad_cmaps = ['flag','Accent','gist_stern','Paired','Dark2','Set1','Set2','Set3','tab10','tab20','tab20c','tab20b','binary','Pastel1','Pastel2','gist_yarg','gist_gray','brg','CMRmap','gist_ncar','gist_rainbow','hsv','terrain','gnuplot2','nipy_spectral','prism']
     non_reversed_colormaps = [x for x in plt.colormaps() if '_r' not in x]      #Generate a list of all colormaps that don't contain "_r" in their name, indicating they are just a reversed version of another colormap. "Grays" and "Grays_r" look fundamentally the same for this type of art.
 
@@ -503,26 +745,55 @@ def pick_random_colormap(print_choice=False,show_plot=False):
         plot_colormap(cmap,title=f'Your randomly-chosen base colormap, {cmap.name}')
     return cmap
 
-def plot_colormap(cmap,title='Your colormap'):
+def plot_colormap(cmap, title='Your colormap'):
+    """
+    Display a matplotlib colormap as a horizontal colorbar.
+
+    Parameters
+    ----------
+    cmap : Colormap
+        Matplotlib colormap to display.
+    title : str, optional
+        Title for the plot (default is 'Your colormap').
+
+    Returns
+    -------
+    The figure and axis objects of the colormap plot.
+    """
     fig_cmap,ax_cmap = plt.subplots(figsize=(12,2))
     ax_cmap.imshow(np.outer(np.ones(100),np.arange(0,1,0.001)),cmap=cmap,origin='lower',extent=[0,1,0,0.1])
     ax_cmap.set_title(title)
     ax_cmap.set_yticks([])
     fig_cmap.tight_layout()
+    return fig_cmap, ax_cmap
 
-def make_custom_colormap(colors=None,nodes=None,show_plot=False):
+def make_custom_colormap(colors=None, nodes=None, show_plot=False):
+    """
+    Create a custom continuous colormap from a list of colors and nodes.
+
+    Parameters
+    ----------
+    colors : list, optional
+        List of hex codes or RGB tuples for colormap colors (default is a preset list).
+    nodes : np.ndarray, optional
+        Array of values between 0 and 1 indicating color positions (default is evenly spaced).
+        The first and last value must be 0 and 1, respectively.
+        For example, if nodes = [0,0.5,1], your colormap will start at color[0], hit color[1] at the middle value, and reach color[2] at the max value
+    show_plot : bool, optional
+        If True, display the colormap (default is False).
+
+    Returns
+    -------
+    cmap_custom : LinearSegmentedColormap
+        The generated custom colormap.
+    """
     print('...Making a custom continuous colormap')
-    #Colors = a list of hex codes or RGB tuples for colors you want your colormap to be composed of
-    #Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
-    #       -The first and last value must be 0 and 1, respectively.
-    #       -For example, if nodes = [0,0.5,1], your colormap will start at color[0], hit color[1] at the middle value, and reach color[2] at the max value
     if colors is None:
         print('WARNING: No input colors specified. Picking some default values....')
         colors=['#33192F','#803D75','#CF2808','#FEE16E','#6AA886','#5CE5FB','#1A1941']
     if nodes is None:
         print('WARNING: No input nodes specified. Picking an evenly-spaced array....')
         nodes = np.linspace(0,1.0,len(colors))  
-    # nodes = np.concatenate((np.linspace(0,0.6,len(colors)-1),np.array([1.0])))
     cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes, colors)))
     
     if show_plot == True:
@@ -535,12 +806,31 @@ def make_custom_colormap(colors=None,nodes=None,show_plot=False):
         fig_cmap.tight_layout()
     return cmap_custom
 
-def make_custom_segmented_colormap(colors=None,nodes=None,show_plot=False,cmap_name = 'custom'):
+def make_custom_segmented_colormap(colors=None, nodes=None, show_plot=False, cmap_name='custom'):
+    """
+    Create a custom segmented colormap from a list of colors and nodes.
+
+    Parameters
+    ----------
+    colors : list, optional
+        List of RGBA tuples for colormap colors (default is a preset list).
+    nodes : np.ndarray, optional
+        Array of values between 0 and 1 indicating color positions (default is evenly spaced).
+    show_plot : bool, optional
+        If True, display the colormap (default is False).
+    cmap_name : str, optional
+        Name for the colormap (default is 'custom').
+
+    Returns
+    -------
+    cmap_custom : LinearSegmentedColormap
+        The generated custom segmented colormap.
+    """
     print('...Making a custom segmented colormap')
-    #Colors = a list of tuples for colors you want your colormap to be composed of
+    #Colors = a list of tuples for colors you want your colormap to be composed of, in RGBA format.
     #Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
     #       -The first and last value must be 0 and 1, respectively.
-    #       -For example, if nodes = [0,0.5,1], your colormap will start at color[0], hit color[1] at the middle value, and reach color[2] at the max value
+    #       -For example, if nodes = [0, 0.4, 0.8, 1], the first 40% of your colormap will be color[0], the next 40% will be color[1], and the final 20% will be color[2]
     if colors is None:
         print('WARNING: No input colors specified. Picking some default values....')
         colors=[(1,0,0,1),(0,1,0,1),(0,0,1,1)]
@@ -548,16 +838,18 @@ def make_custom_segmented_colormap(colors=None,nodes=None,show_plot=False,cmap_n
         print('WARNING: No input nodes specified. Picking an evenly-spaced array....')
         nodes = np.linspace(0,1.0,len(colors)+1)  
         
-    #Because we're making a segmented colormap, we must duplicate each color in the colors array, as well as the inner noes of the nodes array
+    #Because we're making a segmented colormap, we must duplicate each color in the colors array, as well as the inner noes of the nodes array.
+    # This is because we must specify the color and value at each segment boundary
+    # For example, if nodes = [0, 0.4, 0.8, 1], then nodes_new = [0, 0.4, 0.4, 0.8, 0.8, 1]. 
     colors = [tuple(color[:-1]) for color in colors]
     colors_new = []
     nodes_new = []
     for i in range(len(colors)):
-        colors_new.append(colors[i])
-        colors_new.append(colors[i])
+        colors_new.extend([colors[i],colors[i]])
+        # colors_new.append(colors[i])
     for i in range(len(nodes)):
-        nodes_new.append(nodes[i])
-        nodes_new.append(nodes[i])
+        nodes_new.extend([nodes[i],nodes[i]])
+        # nodes_new.append(nodes[i])
     nodes_new = nodes_new[1:-1]
 
     cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes_new, colors_new)))
@@ -573,19 +865,40 @@ def make_custom_segmented_colormap(colors=None,nodes=None,show_plot=False,cmap_n
         fig_cmap.tight_layout()
     return cmap_custom
 
-def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,threshold_percentile,minimum_region_area,
-                    show_plots=False,include_perimeter_regions=False):
+def make_cell_image(image_dimensions, num_voronoi_points=400, gauss_smoothing_sigma=6, threshold_percentile=70, minimum_cell_area=25,
+                    show_plots=False, include_perimeter_regions=False):
+    """
+    Produce a thresholded cell image using Voronoi diagrams and Gaussian smoothing. 
+    Note that this function has a number of parameters that (currently) do not scale with image size. Default values are chosen such that they work well for a 1920x1080 image, 
+    but deviations from that image size may require some tweaking of the parameters to get a good result.
+
+    Parameters
+    ----------
+    image_dimensions : list or tuple of int
+        [width, height] in pixels for the output image.
+    num_voronoi_points : int
+        Number of scatterpoints used to generate the Voronoi diagram. Higher number = more cells, in general.
+    gauss_smoothing_sigma : float
+        Standard deviation for Gaussian smoothing (in pixels). A larger number means rounder cells. 
+    threshold_percentile : float
+        Percentile for thresholding the smoothed image. Thickness of the "webbing" between cells. Low number = thicker webbing
+    minimum_cell_area : int
+        Minimum area (in pixels) for cells to keep. 
+    show_plots : bool, optional
+        If True, display intermediate plots (default is False).
+    include_perimeter_regions : bool, optional
+        If True, include regions that fall over the border (default is False).
+
+    Returns
+    -------
+    image_final : np.ndarray
+        The final thresholded cell image.
+    """
     print('...Producing a thresholded cell image')
-    #num_voronoi_points = number of scatterpoints used to generate the Voronoi diagram. Higher number = more cells, in general
-    #gauss_smoothing_sigma = In pixels, how "round" the corners of the cells are
-    #threshold_percentile = thickness of the webbing between cells. Low number = thicker webbing
-    #minimum_region_area = any cells with an area smaller than this (in pixels) will be removed
     vor = make_voronoi(num_voronoi_points,*image_dimensions)
 
-    # print('Making cell image!')
     #Convert the voronoi diagram ridges into (x,y) points
     x_new,y_new = voronoi_to_points(vor,1)
-    # print('Done converting into (x,y) points')
     
     #Remove points that fall outside of the region of interest
     good_indices = np.where((x_new > 0) & (x_new < image_dimensions[0]) & (y_new > 0) & (y_new < image_dimensions[1]))[0]
@@ -599,55 +912,68 @@ def make_cell_image(image_dimensions,num_voronoi_points,gauss_smoothing_sigma,th
         ax.set_ylim(0,image_dimensions[1])
         ax.set_aspect('equal')
         ax.scatter(x_new,y_new,s=20)
+        ax.set_title('Original Voronoi diagram')
         fig.tight_layout()
     
-    #Take the (x,y) points and histogram them.
+    #Take the (x,y) points and histogram them. 
     image = np.histogram2d(x_new,y_new,bins=image_dimensions,range=[[0,image_dimensions[0]],[0,image_dimensions[1]]])[0].T
     if show_plots == True:
-        fig2,ax2 = plt.subplots(1,5,figsize=(18,5),sharey=True)
-        ax2[0].imshow(image,origin='lower')
-        ax2[0].set_title('Original Voronoi')
-    # print('Done histgramming')
+        fig2,ax2 = plt.subplots(2,3,figsize=(18,7),sharey=True)
+        ax2[0,0].imshow(image,origin='lower')
+        ax2[0,0].set_title('Histogrammed Voronoi webbing')
 
     #Apply some gaussian smoothing to the image
     image_proc = np.log10(image+.0001)
     image_proc = gaussian_filter(image_proc,gauss_smoothing_sigma)
     if show_plots == True:
-        ax2[1].imshow(image_proc,origin='lower')
-        ax2[1].set_title('imagemed + smoothed')
-        ax2[1].set_aspect('equal')
+        ax2[0,1].imshow(image_proc,origin='lower')
+        ax2[0,1].set_title('Gaussian smoothed')
+        ax2[0,1].set_aspect('equal')
     
     #Threshold the image
     image_threshold = np.zeros(image_proc.shape,dtype=np.uint8)
     image_threshold[image_proc < np.percentile(image_proc,threshold_percentile)] = 1
     if show_plots == True:    
-        ax2[2].imshow(image_threshold,origin='lower')
-        ax2[2].set_title('Threshold applied')
-        ax2[2].set_aspect('equal')
-    # print('Done thresholding')
+        ax2[0,2].imshow(image_threshold,origin='lower')
+        ax2[0,2].set_title('Threshold applied')
+        ax2[0,2].set_aspect('equal')
     
     if include_perimeter_regions == False:
         #Remove the regions that fall over the border
         image_final = remove_perimeter_regions(image_threshold)
         if show_plots == True:    
-            ax2[3].imshow(image_final,origin='lower')
-            ax2[3].set_title('Border regions removed')
-        # print('Done removing outer regions')
+            ax2[1,0].imshow(image_final,origin='lower')
+            ax2[1,0].set_title('Perimeter regions removed')
     else:
         image_final = image_threshold.copy()
         
     #Identify regions that are smaller in size than some threshold
-    image_final = remove_small_regions(image_final, minimum_region_area)
+    image_final = remove_small_regions(image_final, minimum_cell_area)
     if show_plots == True:    
-        ax2[4].imshow(image_final,origin='lower')
-        ax2[4].set_title('Small regions removed')
+        ax2[1,1].imshow(image_final,origin='lower')
+        ax2[1,1].set_title('Small cells removed')
         fig2.tight_layout()
-    # print('Done removing small regions')
+
+    # Normalize the final image to the range [0,1]
+    image_final = (image_final - np.min(image_final)) / (np.max(image_final) - np.min(image_final))
 
     return image_final
 
 #Identify the centroids of each cell
 def calculate_cell_centroids(thresholded_cell_image):
+    """
+    Calculate the centroids of each cell in a thresholded cell image.
+
+    Parameters
+    ----------
+    thresholded_cell_image : np.ndarray
+        Binary image of thresholded cells.
+
+    Returns
+    -------
+    centroids : np.ndarray
+        Array of (x, y) centroid coordinates for each cell.
+    """
     print('...Calculating cell centroids')
     
     #Define a grid of (x,y) coordinates to represent the pixel locations in the image. Necessary for making a contour plot later.
@@ -669,7 +995,24 @@ def calculate_cell_centroids(thresholded_cell_image):
     return np.transpose(np.array([x_centroids,y_centroids]))
 
 
-def remove_cells_outside_circular_region(thresholded_cell_image,center,radius):
+def remove_cells_outside_circular_region(thresholded_cell_image, center, radius):
+    """
+    Remove cells in a thresholded cell image that fall outside a defined circular region.
+
+    Parameters
+    ----------
+    thresholded_cell_image : np.ndarray
+        Binary image of thresholded cells.
+    center : list or tuple of float
+        (x, y) coordinates of the circle center.
+    radius : float
+        Radius of the circle.
+
+    Returns
+    -------
+    new_thresholded_cell_image : np.ndarray
+        Image with cells outside the circle removed.
+    """
     print('...Removing cells that fall outside the defined region')
     
     #Define a grid of (x,y) coordinates to represent the pixel locations in the image. Necessary for making a contour plot later.
