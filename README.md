@@ -60,6 +60,7 @@ Questions, suggestions, or feedback? Contact the author:
 **Evan Bray** — Bray.EvanP@gmail.com
 
 ## Image Gallery
-Sample outputs will be added here soon.
+A small, arbitrarily-chosen collection of images that this script is capable of producing. 
 
-![Gallery Placeholder](PLACEHOLDER_FOR_GALLERY)
+<img width="1965" height="1107" alt="image" src="https://github.com/user-attachments/assets/b68c49b7-bc41-401c-b857-113d5ed86162" />
+
