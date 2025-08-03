@@ -185,7 +185,7 @@ def generate_paint_pour_image(
     if rescaling_exponent is None:
         rescaling_exponent = 10 ** np.random.uniform(0.1, 3)
     noise_field = log_rescaler(noise_field_unscaled, exponent=rescaling_exponent,show_plot=show_intermediate_plots)
-    if show_intermediate_plots is True:
+    if (show_intermediate_plots is True) and (rescaling_exponent != 1): # No point in showing this plot if the exponent is 1 since both images will be identical
         fig, axs = plt.subplots(1, 2, figsize=(12, 5))
         im0 = axs[0].imshow(noise_field_unscaled, origin='lower',cmap=cmap_base)
         axs[0].set_title('Unscaled Noise Field')
@@ -202,7 +202,7 @@ def generate_paint_pour_image(
         gauss_smoothing_sigma = 6
         threshold_percentile = 70
         # Based on the image dimensions, calculate the number of points to use in making the Voronoi diagram. Choose between either a low, medium, or high-density. 
-        num_voronoi_points = np.random.choice([100,250,600])*image_dimensions[0]*image_dimensions[1]/(1920*1080)
+        num_voronoi_points = int(np.random.choice([100,250,600])*image_dimensions[0]*image_dimensions[1]/(1920*1080))
         cell_field = make_cell_image(image_dimensions,num_voronoi_points=num_voronoi_points,show_plots=show_intermediate_plots, gauss_smoothing_sigma=gauss_smoothing_sigma,
             threshold_percentile=threshold_percentile, include_perimeter_regions=include_perimeter_regions)
         
@@ -313,7 +313,7 @@ def log_rescaler(input_values, exponent, show_plot=False):
         Logarithmically rescaled values.
     """
     rescaled_values = _log_rescale_helper(input_values, exponent)
-    if show_plot:
+    if (show_plot is True) and (exponent != 1): # No point in showing this plot if the exponent is 1 since it will just be a straight line
         _x = np.linspace(0,1,100)
         fig, ax = plt.subplots(figsize=(6, 4))
         ax.plot(_x, _log_rescale_helper(_x,exponent))
