@@ -8,12 +8,10 @@ import time
 import os
 import cv2
 import paint_pour_tools as pptools
-# use('TkAgg')
+use('TkAgg')
 # Show the plots in the iPython console
 # %matplotlib inline 
-# plt.close('all') # Close all existing plots before starting
 
-#TODO, add a way to overplot cell lines to the perlin noise images
 
 #########USER-DEFINED VARIABLES#########
 image_dimensions = [1920, 1080]
@@ -25,9 +23,8 @@ num_images = 1                    #How many images do you want to produce?
 show_intermediate_plots = True  #Do you want to show some intermediate results to help with troubleshooting?
 seed=None                        #Set a seed for the random number generator. If None, a seed will be chosen randomly. 
 
-cmap_name = 'any'                #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
+cmap_name = 'inferno'                #Which colormap do you want to use for your images? Use "any" to pick one at random, 'custom' to use a custom one from the block below, or pick one from this list: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 output_directory = 'D:/Google Drive/Python Projects/Paint Pouring/Pictures/temp/'
-
 
 ########################################
 pptools.generate_paint_pour_images(
@@ -39,5 +36,5 @@ pptools.generate_paint_pour_images(
     cmap_name=cmap_name,
     output_directory=output_directory,
     seed=seed,
-    add_cells=False
+    prominent_cells=True
 )
