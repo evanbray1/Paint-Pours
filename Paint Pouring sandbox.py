@@ -1,12 +1,3 @@
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap,LinearSegmentedColormap
-from matplotlib import colorbar, use
-from scipy.ndimage import gaussian_filter
-from scipy.spatial import Voronoi, voronoi_plot_2d
-import numpy as np
-import time
-import os
-import cv2
 import paint_pour_tools as pptools
 use('TkAgg')
 # Show the plots in the iPython console
