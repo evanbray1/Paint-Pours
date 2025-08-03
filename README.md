@@ -5,7 +5,7 @@
 
 
 ## Overview
-This project digitally replicates the visual style of "paint pour" artwork, where an artist pours multiple colors of acrylic paint onto a canvas to create beautiful, organic patterns. This package attempts to recreate this style of art by thinking of it as a carefully-crafted 3D surface, shown as a filled contour plot. The program generates aesthetic, filled-contour images using fractal/Perlin noise, custom segmented colormaps, and optional Voronoi-style cell overlays, resulting in images that closely resemble real paint pours.
+This project seeks to digitally replicates the visual style of "paint pour" artwork, where an artist pours multiple colors of acrylic paint onto a canvas to create beautiful, organic patterns. This package attempts to recreate this style of art by thinking of it as a carefully-crafted 3D surface, shown as a filled contour plot. The program generates aesthetic, filled-contour images using fractal/Perlin noise, custom segmented colormaps, and optional Voronoi-style cell overlays, resulting in images that closely resemble real paint pours.
 
 ## Intended Audience
 This tool is presented here for categories of people. 
@@ -17,7 +17,7 @@ This tool is presented here for categories of people.
 - **Customizable Parameters:** Over a dozen variables can be tweaked manually for creative control, or left to be randomly chosen from sensible ranges.
 - **Voronoi Cell Overlays:** Add cell-like structures to simulate effects seen in real acrylic pours. Although best visualized with the 'prominent_cells' argument, more features are coming to incorporate these cells structures at smaller scales in ways that more closely mimic real paint pours.
 - **Prominent Cells Mode:** The `prominent_cells` option produces a fundamentally different style of image by manipulating variable ranges, resulting in large "cells" (as the paint pour artists call them) being prominently featured in the foreground. This style was popular enough during user-testing (aka sharing photos with friends) that it warranted its own dedicated preset.
-- **Flexible Saving:** Save images to a specified directory, or simply display them interactively.
+- **Flexible Saving:** Save images to a specified directory, already properly rendered in the desired resolution, or simply display them interactively.
 - **Intermediate plots for troubleshooting:** Optionally display detailed intermediate plots to illustrate the many steps of the image generation process. A selection of these plots are shown below. 
 
 <img width="2012" height="1131" alt="image" src="https://github.com/user-attachments/assets/cd36aaa1-a248-4df1-bcf6-6b0165aef093" />
