@@ -13,9 +13,9 @@ This tool is presented here for categories of people.
 ## Features
 - **Automatic Generation:** Easily create paint pour-style images with a single function call.
 - **Customizable Parameters:** Over a dozen variables can be tweaked manually for creative control, or left to be randomly chosen from sensible ranges.
+- **Voronoi Cell Overlays:** Add cell-like structures to simulate effects seen in real acrylic pours. Although best visualized with the 'prominent_cells' argument, more features are coming to incorporate these cells structures at smaller scales in ways that more closely mimic real paint pours.
 - **Prominent Cells Mode:** The `prominent_cells` option produces a fundamentally different style of image by manipulating variable ranges, resulting in large "cells" (as the paint pour artists call them) being prominently featured in the foreground. This style was popular enough during user-testing (aka sharing photos with friends) that it warranted its own dedicated preset.
 - **Intermediate Plots:** Optionally display detailed intermediate plots to illustrate the many steps of the image generation process.
-- **Voronoi Cell Overlays:** Add cell-like structures to simulate effects seen in real acrylic pours. Although best visualized with the 'prominent_cells' argument, more features are coming to incorporate these cells structures at smaller scales in ways that more closely mimic real paint pours.
 - **Flexible Saving:** Save images to a specified directory, or simply display them interactively.
 
 ![Intermediate Plot Example](PLACEHOLDER_FOR_INTERMEDIATE_IMAGE)
@@ -44,6 +44,11 @@ For more advanced usage, you can specify additional parameters to customize the 
 
 ## Installation
 This project requires no special installation instructions, aside from several common modules like NumPy, Matplotlib, and Scipy. 
+
+### Features I would like to add someday
+- **Silicone oil "cells":** When silicone oil is added to the paint mixture in certain layers, it changers the surface tension properties of that layer, which results in that layer breaking when it gets thin enough, and allowing the lower layers to show through. For example, the below image has lots of these cells. This has proven a tricky feature to simulate.
+- **Inter-layer blending:** Sometimes, the artist will purposefully, loosely mix two colors of paint so they are not quite homogenous _prior_ to pouring them onto the canvas. The image shown at the top of this ReadMe exhibits some of this. This can be done by craftily converting some portions of the segmented colormap to a continuous colormap. 
+- **Like-color grouping:** This is exhibited in the image at the top of this page, where there are several shades of red and brown appearing in a horizontal band through the middle, and a band of pinks and whites just beneath it. Currently, segmented colormaps are produced by _completely_ randomly sampling the chosen base colormap. By incorporating some bias to this choice, or sampling multiple colors in batches from subsections of the base colormap, I believe this effect can be recreated digitally. 
 
 ## Contact
 Questions, suggestions, or feedback? Contact the author:

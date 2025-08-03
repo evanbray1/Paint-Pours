@@ -16,6 +16,7 @@ def generate_paint_pour_images(
     show_intermediate_plots=False,
     add_cells=False,
     cmap_name='any',
+    custom_cmap_colors=None,
     seed=None,
     output_directory=None,
     octave_powers=None,
@@ -49,7 +50,8 @@ def generate_paint_pour_images(
         Directory to save output images. If None, image will not be saved (default is None).
     prominent_cells : bool, optional
         If True, applies special treatment to variables so cells are featured prominently in the foreground (default is False).
-
+    custom_cmap_colors : list, optional
+        List of hex codes or RGB tuples for colormap colors (default is a preset list).
     Returns
     -------
     None
@@ -68,6 +70,7 @@ def generate_paint_pour_images(
             num_levels=num_levels,
             rescaling_exponent=rescaling_exponent,
             cmap_name=cmap_name,
+            custom_cmap_colors=custom_cmap_colors,
             stretch_value=stretch_value,
             display_final_image=display_final_image,
             save_image=save_image,
@@ -87,6 +90,7 @@ def generate_paint_pour_image(
         show_intermediate_plots=False,
         add_cells=False,
         cmap_name='any',
+        custom_cmap_colors=None,
         output_directory=None, 
         seed=None,
         octave_powers=None,
@@ -126,7 +130,8 @@ def generate_paint_pour_image(
         Number of color levels in the colormap. If None, then a sensible value will be randomly chosen. If 'continuous', a continuous colormap will be used (default is None). 
     prominent_cells : bool, optional
         If True, applies special treatment to variables so cells are featured prominently in the foreground (default is False).
-
+    custom_cmap_colors : list, optional
+        List of hex codes or RGB tuples for colormap colors (default is a preset list).
     Returns
     -------
     noise_field : array
@@ -161,9 +166,12 @@ def generate_paint_pour_image(
     if num_levels is None:
         num_levels = np.random.choice([30, 40, 50])
     if cmap_name == 'custom':
-        cmap_base = make_custom_colormap(
-            colors=['#33192F', '#803D75', '#CF2808', '#FEE16E', '#6AA886', '#5CE5FB', '#1A1941'],
-            show_plot=False)
+        if custom_cmap_colors is None:
+            print('WARNING: No custom colormap colors provided, using some default colors')
+            colors = ['#33192F', '#803D75', '#CF2808', '#FEE16E', '#6AA886', '#5CE5FB', '#1A1941']
+        else:
+            colors = custom_cmap_colors.copy()
+        cmap_base = make_custom_colormap(colors=colors,show_plot=False)
     elif cmap_name == 'any':
         cmap_base = pick_random_colormap(show_plot=False)
     else:
@@ -405,9 +413,9 @@ def perlin_field(image_dimensions,octave,stretch,make_tileable=False, show_plots
     if octave == 0:
         grid_dimensions = [2,2]
     elif stretch < 0:
-        grid_dimensions = [abs(stretch)+2**(octave),2**(octave)]
+        grid_dimensions = [abs(stretch)*2**(octave),2**(octave)]
     elif stretch > 0:
-        grid_dimensions = [2**(octave),stretch+2**(octave)]
+        grid_dimensions = [2**(octave),stretch*2**(octave)]
     else:
         grid_dimensions = [2**(octave),2**(octave)]
         
