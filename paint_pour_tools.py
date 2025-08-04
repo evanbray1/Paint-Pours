@@ -259,17 +259,24 @@ def generate_paint_pour_image(
     ax = plt.Axes(fig, [0., 0., 1., 1.]) # Make the axes fill the entire figure
     fig.add_axes(ax)
     ax.imshow(noise_field, cmap=cmap, origin='lower', vmin=0, vmax=1)
+
     if save_image:
         filename = (cmap.name + '_' + str(num_levels) + 'levels_' + '_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]]) +
             '_stretch' + str(stretch_value) + '_exponent' + '{:.0f}'.format(rescaling_exponent))
         if add_cells:
             # filename += '_gausssmooth' + str(gauss_smoothing_sigma) + '_threshold' + str(threshold_percentile)
             filename += f'_cellfieldcoeff{cell_field_coefficient:.1f}_vorpoints{num_voronoi_points:d}'
-        filename += '_seed' + str(seed)
-        output_directory_temp = output_directory
+        filename += '_seed' + str(seed)+'.png'
+        if output_directory is None:
+            output_directory_temp = os.path.join(os.getcwd(),'paint_pour_output_images')
+        else:
+            #This might seem redundant, but I anticipate adding the ability to auto-create output directory based on colormap name, 
+            # in which case we'll want a temporary output_directory variable.
+            output_directory_temp = output_directory 
         if not os.path.exists(output_directory_temp):
             os.makedirs(output_directory_temp)
-        fig.savefig(output_directory_temp + filename + '.png', dpi=120)
+        fig.savefig(os.path.join(output_directory_temp,filename), dpi=120)
+        print(f'***Image saved to: {output_directory_temp}')
     if display_final_image is True:
         plt.show(block=False)
 
