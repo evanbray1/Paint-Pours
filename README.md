@@ -59,7 +59,7 @@ For more advanced usage, you can specify additional parameters to customize the 
 ## Installation
 This project requires no special installation instructions, aside from several common modules like NumPy, Matplotlib, and Scipy. 
 
-### Features I would like to add someday
+## Features I would like to add someday
 - **Silicone oil "cells":** When silicone oil is added to the paint mixture in certain layers, it changers the surface tension properties of that layer, which results in that layer breaking when it gets thin enough, and allowing the lower layers to show through. For example, the below image has lots of these cells. This has proven a tricky feature to simulate.
   - ![paint pour with cells](https://github.com/user-attachments/assets/db4a4a1e-d9e6-44b5-8413-62084241b013)
 
