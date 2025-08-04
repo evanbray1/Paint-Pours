@@ -5,7 +5,7 @@
 
 
 ## Overview
-This project seeks to digitally replicates the visual style of "paint pour" artwork, where an artist pours multiple colors of acrylic paint onto a canvas to create beautiful, organic patterns. This package attempts to recreate this style of art by thinking of it as a carefully-crafted 3D surface, shown as a filled contour plot. The program generates aesthetic, filled-contour images using fractal/Perlin noise, custom segmented colormaps, and optional Voronoi-style cell overlays, resulting in images that closely resemble real paint pours.
+This project seeks to digitally replicate the visual style of "paint pour" artwork, where an artist pours multiple colors of acrylic paint onto a canvas to create beautiful, organic patterns. This package attempts to recreate this style of art by thinking of it as a carefully-crafted 3D surface, shown as a filled contour plot. The program generates aesthetic, filled-contour images using fractal/Perlin noise, custom segmented colormaps, and optional Voronoi-style cell overlays, resulting in images that closely resemble real paint pours.
 
 ## Intended Audience
 This tool is presented here for categories of people. 
