@@ -5,13 +5,13 @@
 
 
 ## Overview
-This project seeks to digitally replicate the visual style of "paint pour" artwork, where an artist pours multiple colors of acrylic paint onto a canvas to create beautiful, organic patterns. This package attempts to recreate this style of art by thinking of it as a carefully-crafted 3D surface and accompanying colormap, shown as a contour plot. The program generates aesthetic, filled-contour images using fractal/Perlin noise, custom segmented colormaps, and optional Voronoi-style cell overlays, resulting in images that closely resemble real paint pours. 
+This project seeks to digitally replicate the visual style of "paint pour" artwork, where an artist pours multiple colors of acrylic paint onto a canvas to create flowy, organic patterns. This package attempts to recreate this style of art by thinking of it as a carefully-crafted 3D surface and accompanying colormap, shown as a contour plot. The program generates filled-contour images using fractal/Perlin noise, custom segmented colormaps, and optional Voronoi-style cell overlays, resulting in images that resemble real paint pours. 
 
-Nearly every aspect of each image can be tweaked with user-defined variables, and when no values are specified, sensible values are randomly selected from intelligently-guessed bounds. The real thrill of this script lies in picking an image size and a striking palette of colors, then letting the algorithms work their magic. In minutes, you'll have an assortment of one-of-a-kind digital art pieces perfect for use as a bold computer wallpaper, phone background, or large-format canvas print.
+Nearly every aspect of each image can be tweaked with user-defined variables. When no values are specified, sensible values are randomly selected from intelligently-guessed bounds. The real thrill of this script lies in picking an image size and a palette of colors you find appealing, then letting the algorithms work their magic. In minutes, you'll have an assortment of one-of-a-kind digital art pieces perfect for use as a computer wallpaper, phone background, or large-format canvas print.
 
 ## Intended Audience
-This tool is presented here for categories of people. 
-1. Anyone interested in creating wallpapers, backgrounds, or banner art for various digital mediums. The code is written to be readable and accessible to true Python novices, making it a great starting point for beginners who want to experiment with generative art.
+This tool is presented here for two categories of people. 
+1. Anyone interested in creating wallpapers, backgrounds, or banner art for various forms of digital media. The code is written to be readable and accessible to true Python novices, making it a great starting point for beginners who want to experiment with generative art.
 2. People who requested a code sample from the author for professional purposes. 
 
 ## Features
@@ -26,7 +26,7 @@ This tool is presented here for categories of people.
 
 
 ## Example Usage
-Some truly minimal examples to generate some paint pour images:
+Some truly minimal examples to get started with:
 
 ```python
 import paint_pour_tools as pptools
@@ -34,10 +34,10 @@ import paint_pour_tools as pptools
 pptools.generate_paint_pour_images(image_dimensions=[1920, 1080])
 pptools.generate_paint_pour_images(image_dimensions=[1920, 1080],prominent_cells=True)
 
-# This will create some images similar to the one you see at the top of this README!
+# This will create some images similar to the one you see at the top of this README.
 pptools.generate_paint_pour_images(
     image_dimensions=[500,1000],
-    num_images=1,
+    num_images=5,
     display_final_image=True,
     save_image=True,
     show_intermediate_plots=False,
