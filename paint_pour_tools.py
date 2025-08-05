@@ -8,81 +8,6 @@ import os
 import time
 import warnings
 
-def generate_paint_pour_images(
-    image_dimensions,
-    num_images=3,
-    display_final_image=True,
-    save_image=True,
-    show_intermediate_plots=False,
-    add_cells=False,
-    cmap_name='any',
-    custom_cmap_colors=None,
-    seed=None,
-    output_directory=None,
-    octave_powers=None,
-    stretch_value=None,
-    rescaling_exponent=None,
-    num_levels=None,
-    prominent_cells=False
-):
-    """
-    Generate and optionally display or save multiple paint pour images using fractal noise and custom colormaps.
-
-    Parameters
-    ----------
-    image_dimensions : list of int
-        [width, height] in pixels for the output image.
-    num_images : int, optional
-        Number of images to generate (default is 3).
-    display_final_image : bool, optional
-        Whether to display the image (default is True).
-    save_image : bool, optional
-        Whether to save the image as a PNG file (default is True).
-    show_intermediate_plots : bool, optional
-        Show intermediate diagnostic plots (default is False).
-    add_cells : bool, optional
-        Overlay Voronoi cell structure on the image (default is False).
-    cmap_name : str, optional
-        Colormap to use ('any', 'custom', or a matplotlib colormap name; default is 'any').
-    seed : int or None, optional
-        Random seed for reproducibility (default is None).
-    output_directory : str or None, optional
-        Directory to save output images. If None, image will not be saved (default is None).
-    prominent_cells : bool, optional
-        If True, applies special treatment to variables so cells are featured prominently in the foreground (default is False).
-    custom_cmap_colors : list, optional
-        List of hex codes or RGB tuples for colormap colors (default is a preset list).
-    Returns
-    -------
-    None
-    """
-    if add_cells is True:
-        warnings.warn('WARNING: the add_cells parameter isnt fully implemented yet. Try setting prominent_cells=True instead for now')
-
-    start_time = time.time()
-    for i in range(num_images):
-        plt.close('all') # Close all existing plots before starting a new image
-        plt.pause(0.1)  # In VSCode specifically, a short pause is needed to ensure interactive plot windows actually close
-        print('Currently making image ', i+1, ' of ', num_images)
-        generate_paint_pour_image(
-            image_dimensions=image_dimensions,
-            octave_powers=octave_powers,
-            num_levels=num_levels,
-            rescaling_exponent=rescaling_exponent,
-            cmap_name=cmap_name,
-            custom_cmap_colors=custom_cmap_colors,
-            stretch_value=stretch_value,
-            display_final_image=display_final_image,
-            save_image=save_image,
-            show_intermediate_plots=show_intermediate_plots,
-            add_cells=add_cells,
-            output_directory=output_directory, 
-            seed=seed,
-            prominent_cells=prominent_cells)
-        end_time = time.time()
-        elapsed_time = round(end_time - start_time, 2)
-        print('Elapsed Time: ' + str(elapsed_time) + ' seconds')
-
 def generate_paint_pour_image(
         image_dimensions,
         display_final_image=True,
@@ -97,7 +22,8 @@ def generate_paint_pour_image(
         stretch_value=None,
         rescaling_exponent=None,
         num_levels=None,
-        prominent_cells=False
+        prominent_cells=False, 
+        **kwargs
     ):
     """
     Generate a single paint pour image using fractal noise, custom colormaps, and optional Voronoi cell overlays.
@@ -132,11 +58,20 @@ def generate_paint_pour_image(
         If True, applies special treatment to variables so cells are featured prominently in the foreground (default is False).
     custom_cmap_colors : list, optional
         List of hex codes or RGB tuples for colormap colors (default is a preset list).
+    **kwargs : dict, optional
+        Additional keyword arguments for advanced customization.
     Returns
     -------
-    noise_field : array
+    paint_pour_surface : array
         The generated paint pour image as a 2D numpy array.
     """
+    # Start a timer to track runtime
+    start_time = time.time()
+
+
+    if add_cells is True:
+        warnings.warn('WARNING: the add_cells parameter isnt fully implemented yet. Try setting prominent_cells=True instead for now')
+
     if seed is None:
         # Generate a random seed if not provided
         # This ensures reproducibility if the same seed is used
@@ -151,6 +86,7 @@ def generate_paint_pour_image(
 
     # A fractal noise image is made by summing together multiple layers (octaves) of Perlin noise. What should the relative strength of the layers be?
     # Pick some values for the fractal noise parameters if they were not provided.
+    # This will represent the beginnings of the surface that will represent our paint pour.
     print('...Making fractal noise layer')
     if octave_powers is None:
         octave_powers = [1,
@@ -159,7 +95,7 @@ def generate_paint_pour_image(
             np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])]
     if stretch_value is None:
         stretch_value = np.random.randint(-2, 3)
-    noise_field_unscaled, vector_info = fractal_noise(image_dimensions, octave_powers, stretch_value, 
+    paint_pour_surface_unscaled, vector_info = fractal_noise(image_dimensions, octave_powers, stretch_value, 
                                              show_fractal_noise_plot=show_intermediate_plots, show_perlin_noise_plots=show_intermediate_plots)
 
     # Make a colormap to use for this image
@@ -187,19 +123,19 @@ def generate_paint_pour_image(
         nodes = np.sort(np.random.uniform(low=0, high=1, size=len(colors) - 1)) # The randomly-chosen boundaries at which the color segments will change
         cmap = make_custom_segmented_colormap(colors=cmap_base(colors),nodes=[0] + list(nodes) + [1],show_plot=show_intermediate_plots,cmap_name=cmap_base.name)
 
-    # Apply some logarithmic rescaling to the noise field. This adds variety in contour spacing, instead of them all being roughly even in thickness on the final image.
+    # Apply some logarithmic rescaling to the paint pour surface. This adds variety in contour spacing, instead of them all being roughly even in thickness on the final image.
     # In my opinion, this makes the resulting contours look more like a genuine paint pour.
     print('...Applying a custom rescaling to the noise field')
     if rescaling_exponent is None:
         rescaling_exponent = 10 ** np.random.uniform(0.1, 3)
-    noise_field = log_rescaler(noise_field_unscaled, exponent=rescaling_exponent,show_plot=show_intermediate_plots)
+    paint_pour_surface = log_rescaler(paint_pour_surface_unscaled, exponent=rescaling_exponent,show_plot=show_intermediate_plots)
     if (show_intermediate_plots is True) and (rescaling_exponent != 1): # No point in showing this plot if the exponent is 1 since both images will be identical
         fig, axs = plt.subplots(1, 2, figsize=(12, 5))
-        im0 = axs[0].imshow(noise_field_unscaled, origin='lower',cmap=cmap_base)
-        axs[0].set_title('Unscaled Noise Field')
+        im0 = axs[0].imshow(paint_pour_surface_unscaled, origin='lower',cmap=cmap_base)
+        axs[0].set_title('Unscaled Surface')
         plt.colorbar(im0, ax=axs[0], fraction=0.046, pad=0.04)
-        im1 = axs[1].imshow(noise_field, origin='lower',cmap=cmap_base)
-        axs[1].set_title(f'Scaled Noise Field, exponent = {rescaling_exponent:.1f}')
+        im1 = axs[1].imshow(paint_pour_surface, origin='lower',cmap=cmap_base)
+        axs[1].set_title(f'Rescaled Surface, exponent = {rescaling_exponent:.1f}')
         plt.colorbar(im1, ax=axs[1], fraction=0.046, pad=0.04)
         fig.tight_layout()
         plt.show(block=False)
@@ -233,11 +169,11 @@ def generate_paint_pour_image(
         ind = np.where(cell_field == 1) # Find the pixels that correspond to the Voronoi cells
         if prominent_cells is True:
             cell_field_coefficient = np.random.choice([0.3,1.0])
-            noise_field += cell_field_coefficient*cell_field # Increment the cells by some amount so they "pop" against the background.
+            paint_pour_surface += cell_field_coefficient*cell_field # Increment the cells by some amount so they "pop" against the background.
             # Re-normalize the noise field to 0-1
-            noise_field = (noise_field - np.nanmin(noise_field)) / (np.nanmax(noise_field) - np.nanmin(noise_field))
+            paint_pour_surface = (paint_pour_surface - np.nanmin(paint_pour_surface)) / (np.nanmax(paint_pour_surface) - np.nanmin(paint_pour_surface))
         else:
-            noise_field[ind] = 1.01
+            paint_pour_surface[ind] = 1.01
             # Choose a random color from the base colormap and set it as the 'over' color for the segmented colormap. This is the color the cells will appear to be.
             cmap.set_over(cmap_base(np.random.uniform(0,1)))
 
@@ -245,7 +181,7 @@ def generate_paint_pour_image(
     if show_intermediate_plots:
         y, x = np.meshgrid(np.arange(image_dimensions[0]), np.arange(image_dimensions[1]))
         fig1, ax1 = plt.subplots(figsize=(8, 6), subplot_kw={"projection": "3d"})
-        surf = ax1.plot_surface(x, y, noise_field, cmap=cmap, linewidth=0, antialiased=False, rcount=100, ccount=100)
+        surf = ax1.plot_surface(x, y, paint_pour_surface, cmap=cmap, linewidth=0, antialiased=False, rcount=100, ccount=100)
         fig1.tight_layout()
         print('\n\n')
         if add_cells:
@@ -258,7 +194,7 @@ def generate_paint_pour_image(
     fig, ax = plt.subplots(1, figsize=(image_dimensions[0] / 120, image_dimensions[1] / 120)) # Ensure that the is displayed in its native resolution
     ax = plt.Axes(fig, [0., 0., 1., 1.]) # Make the axes fill the entire figure
     fig.add_axes(ax)
-    ax.imshow(noise_field, cmap=cmap, origin='lower', vmin=0, vmax=1)
+    ax.imshow(paint_pour_surface, cmap=cmap, origin='lower', vmin=0, vmax=1)
 
     if save_image:
         filename = (cmap.name + '_' + str(num_levels) + 'levels_' + '_'.join(['{:.2f}'.format(i) for i in octave_powers[1:]]) +
@@ -280,7 +216,11 @@ def generate_paint_pour_image(
     if display_final_image is True:
         plt.show(block=False)
 
-    return noise_field
+    # Return some info about the runtime
+    elapsed_time = round(time.time() - start_time, 2)
+    print('Elapsed Time: ' + str(elapsed_time) + ' seconds')
+
+    return paint_pour_surface
 
 def _log_rescale_helper(input_values, exponent):
     """
