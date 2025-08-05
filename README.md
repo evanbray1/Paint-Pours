@@ -35,18 +35,25 @@ pptools.generate_paint_pour_images(image_dimensions=[1920, 1080])
 pptools.generate_paint_pour_images(image_dimensions=[1920, 1080],prominent_cells=True)
 
 # This will create some images similar to the one you see at the top of this README.
-pptools.generate_paint_pour_images(
-    image_dimensions=[500,1000],
-    num_images=5,
-    display_final_image=True,
-    save_image=True,
-    show_intermediate_plots=False,
-    cmap_name='custom',
-    custom_cmap_colors=['#dadfdb','#a2544c', '#e4bda2', '#f18c6b', '#5c3c37', '#ce9896', '#7a291c', '#ce3d47'],
-    num_levels=90,
-    octave_powers=[1, 0.1, 0.0, 0.005],
-    stretch_value=4,
-    seed=None)
+for i in range(num_images):
+    plt.close('all') # Close all existing plots before starting a new image
+    plt.pause(0.1)  # In VSCode specifically, a short pause is needed to ensure interactive plot windows actually close
+    print('Currently making image ', i+1, ' of ', num_images)
+
+    pptools.generate_paint_pour_image(
+        image_dimensions=image_dimensions,
+        display_final_image=display_final_image,
+        save_image=save_image,
+        show_intermediate_plots=show_intermediate_plots,
+        cmap_name=cmap_name,
+        custom_cmap_colors=['#dadfdb','#a2544c', '#e4bda2', '#f18c6b', '#5c3c37', '#ce9896', '#7a291c', '#ce3d47'],
+        num_levels=90,
+        octave_powers=[1, 0.1, 0.0, 0.005],
+        stretch_value=4,
+        output_directory=output_directory,
+        seed=seed,
+        prominent_cells=False
+    )
 ```
 
 For more advanced usage, you can specify additional parameters to customize the output. See the docstrings for the `generate_paint_pour_image()` function.
