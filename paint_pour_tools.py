@@ -424,6 +424,65 @@ def fractal_noise(image_dimensions, relative_powers, stretch, show_perlin_noise_
         return (image.astype('float32'), octave_stack), vectors
     return image.astype('float32'), vectors
 
+def _log_rescale_helper(input_values, exponent):
+    """
+    Helper function to rescale input values using a logarithmic transformation.
+
+    Parameters
+    ----------
+    input_values : np.ndarray
+        Array of values to rescale.
+    exponent : float
+        Exponent for the log rescaling.
+
+    Returns
+    -------
+    rescaled_values : np.ndarray
+        Logarithmically rescaled values.
+    """
+    if exponent != 1:
+        rescaled_values = np.log10(exponent * input_values + 1) / np.log10(exponent)
+        rescaled_values -= np.min(rescaled_values[rescaled_values != -np.inf])
+        rescaled_values /= rescaled_values.max()
+        if (exponent < 1) and (exponent > 0):
+            rescaled_values = abs(rescaled_values - 1)
+    else:
+        rescaled_values = input_values.copy()
+    return rescaled_values
+
+def log_rescaler(input_values, exponent, show_plot=False):
+    """
+    Rescale input values using a logarithmic transformation with the given exponent.
+    Optionally displays a plot of rescaled values vs input values.
+
+    Parameters
+    ----------
+    input_values : np.ndarray
+        Array of values to rescale.
+    exponent : float
+        Exponent for the log rescaling.
+    show_plot : bool, optional
+        If True, show a plot of input vs rescaled values (default is False).
+
+    Returns
+    -------
+    rescaled_values : np.ndarray
+        Logarithmically rescaled values.
+    """
+    rescaled_values = _log_rescale_helper(input_values, exponent)
+    if (show_plot is True) and (exponent != 1): # No point in showing this plot if the exponent is 1 since it will just be a straight line
+        _x = np.linspace(0,1,100)
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.plot(_x, _log_rescale_helper(_x,exponent))
+        ax.set_xlabel('Input Values')
+        ax.set_ylabel('Rescaled Values')
+        ax.set_title(f'Log Rescaler (exponent={exponent:.1f})')
+        ax.set_xlim(0,1)
+        ax.set_ylim(0,1)
+        fig.tight_layout()
+        plt.show(block=False)
+    return rescaled_values
+
 def make_voronoi(npoints, width, height):
     """
     Generate a Voronoi diagram from random points within a given width and height.
