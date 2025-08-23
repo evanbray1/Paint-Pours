@@ -16,19 +16,15 @@ use('QtAgg') # Depending on which IDE you're using, you might need to change thi
 # Example: To change the colormap, set custom_cmap_colors or cmap_name.
 
 ######### USER-DEFINED VARIABLES #########
-image_dimensions = [500, 1000]
+image_dimensions = [800, 800]
 display_final_image = True        # Display the image on the screen?
 save_image = True                 # Save a .png copy of your image?
 num_images = 1                    # How many images to produce?
 show_intermediate_plots = False   # Show intermediate results for troubleshooting?
 seed = None                       # Set a seed for reproducibility. If None, a seed is chosen randomly.
-cmap_name = 'custom'              # Colormap: 'any', 'custom', or a matplotlib colormap name
-output_directory = 'D:/Google Drive/Python Projects/Paint Pouring/Pictures/sample_output/'
-custom_cmap_colors = ['#dadfdb','#a2544c', '#e4bda2', '#f18c6b', '#5c3c37', '#ce9896', '#7a291c', '#ce3d47']
-num_levels = 90
-octave_powers = [1, 0.1, 0.0, 0.005]
-stretch_value = 4
-prominent_cells = False
+cmap_name = 'any'              # Colormap: 'any', 'custom', or a matplotlib colormap name
+output_directory = './testing/'
+
 
 ##########################################
 for i in range(num_images):
@@ -36,7 +32,7 @@ for i in range(num_images):
     plt.pause(0.1)  # In VSCode, a short pause ensures plot windows close properly
     print(f'Currently making image {i+1} of {num_images}')
 
-    # Create a PaintPour object with your chosen parameters
+    # Create a PaintPour class object with your chosen parameters
     paint_pour = pptools.PaintPour(
         image_dimensions=image_dimensions,
         display_final_image=display_final_image,
@@ -46,3 +42,6 @@ for i in range(num_images):
         output_directory=output_directory,
         seed=seed
     )
+
+    # Generate the paint pour
+    paint_pour_image = paint_pour.generate()

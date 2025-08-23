@@ -22,7 +22,7 @@ class PaintPour:
                  octave_powers=None,
                  stretch_value=None,
                  rescaling_exponent=None,
-                 num_levels=None,
+                 num_colormap_levels=None,
                  prominent_cells=False,
                  **kwargs):
         self.image_dimensions = image_dimensions
@@ -37,9 +37,10 @@ class PaintPour:
         self.octave_powers = octave_powers
         self.stretch_value = stretch_value
         self.rescaling_exponent = rescaling_exponent
-        self.num_levels = num_levels
+        self.num_colormap_levels = num_colormap_levels
         self.prominent_cells = prominent_cells
         self.kwargs = kwargs
+        
         # Output attributes
         self.base_colormap = None
         self.final_colormap = None
@@ -47,69 +48,41 @@ class PaintPour:
         self.noise_octaves = None # 3D array: each 2D slice is one octave
         self.paint_pour_surface = None
 
+        # Intelligently pick some basic parameters if the user didn't specify them
+        self.assign_unspecified_parameters()
+
     def generate(self):
-        start_time = time.time()
-        if self.add_cells:
-            warnings.warn('WARNING: the add_cells parameter isnt fully implemented yet. Try setting prominent_cells=True instead for now')
-        if self.seed is None:
-            self.seed = np.random.randint(1, int(1e8))
-        np.random.seed(self.seed)
-        if self.prominent_cells:
-            self.rescaling_exponent = 1
-            self.add_cells = True
-            self.num_levels = 'continuous'
-        if self.octave_powers is None:
-            self.octave_powers = [1,
-                np.round(np.random.uniform(0.1, 0.5), 1),
-                np.round(np.random.uniform(0.0, 0.1), 2),
-                np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])]
-        if self.stretch_value is None:
-            self.stretch_value = np.random.randint(-2, 3)
+        start_time = time.time() # Start a timer for performance-tracking purposes
+        np.random.seed(self.seed) # Set the seed for the random number generator
+
         # Fractal noise and octave slices
         # Generate noise and octaves
         noise_map_tuple, vector_info = fractal_noise(
-            self.image_dimensions, self.octave_powers, self.stretch_value,
+            image_dimensions = self.image_dimensions, 
+            relative_powers = self.octave_powers, 
+            stretch = self.stretch_value,
             show_fractal_noise_plot=self.show_intermediate_plots,
             show_perlin_noise_plots=self.show_intermediate_plots,
             return_octaves=True)
         self.noise_map = noise_map_tuple[0]
         self.noise_octaves = noise_map_tuple[1]
 
-        # Colormap selection
-        if self.num_levels is None:
-            self.num_levels = np.random.choice([30, 40, 50])
-        if self.cmap_name == 'custom':
-            if self.custom_cmap_colors is None:
-                colors = ['#33192F', '#803D75', '#CF2808', '#FEE16E', '#6AA886', '#5CE5FB', '#1A1941']
-            else:
-                colors = self.custom_cmap_colors.copy()
-            self.base_colormap = make_custom_colormap(colors=colors, show_plot=False)
-        elif self.cmap_name == 'any':
-            self.base_colormap = pick_random_colormap(show_plot=False)
-        else:
-            self.base_colormap = plt.cm.get_cmap(self.cmap_name)
-        if self.show_intermediate_plots:
-            plot_colormap(self.base_colormap, title='Your base colormap, ' + self.base_colormap.name)
-        if self.num_levels == 'continuous':
-            self.final_colormap = self.base_colormap.copy()
-        else:
-            colors = np.random.randint(low=0, high=256, size=self.num_levels)
-            nodes = np.sort(np.random.uniform(low=0, high=1, size=len(colors) - 1))
-            self.final_colormap = make_custom_segmented_colormap(colors=self.base_colormap(colors), nodes=[0] + list(nodes) + [1], show_plot=self.show_intermediate_plots, cmap_name=self.base_colormap.name)
-
-        # Rescale noise
-        if self.rescaling_exponent is None:
-            self.rescaling_exponent = 10 ** np.random.uniform(0.1, 3)
+        # Apply some log-scaling to the noise map
         self.paint_pour_surface = log_rescaler(self.noise_map, exponent=self.rescaling_exponent, show_plot=self.show_intermediate_plots)
 
+        # Generate a colormap for this image
+        self.pick_paint_pour_colormap()
+
         # Add cells if needed
+        if self.add_cells and not self.prominent_cells:
+            warnings.warn('WARNING: the add_cells parameter isnt fully implemented yet. Try setting prominent_cells=True instead for now')
         if self.add_cells:
             include_perimeter_regions = np.random.choice([True,False])
-            gauss_smoothing_sigma = 6
-            threshold_percentile = 70
+            self.gauss_smoothing_sigma = 6
+            self.threshold_percentile = 70
             num_voronoi_points = int(np.random.choice([100,250,600])*self.image_dimensions[0]*self.image_dimensions[1]/(1920*1080))
-            cell_field = make_cell_image(self.image_dimensions, num_voronoi_points=num_voronoi_points, show_plots=self.show_intermediate_plots, gauss_smoothing_sigma=gauss_smoothing_sigma,
-                threshold_percentile=threshold_percentile, include_perimeter_regions=include_perimeter_regions)
+            cell_field = make_cell_image(self.image_dimensions, num_voronoi_points=num_voronoi_points, show_plots=self.show_intermediate_plots, gauss_smoothing_sigma=self.gauss_smoothing_sigma,
+                threshold_percentile=self.threshold_percentile, include_perimeter_regions=include_perimeter_regions)
             ind = np.where(cell_field == 1)
             if self.prominent_cells:
                 cell_field_coefficient = np.random.choice([0.3,1.0])
@@ -127,13 +100,13 @@ class PaintPour:
             ax.imshow(self.paint_pour_surface, cmap=self.final_colormap, origin='lower', vmin=0, vmax=1)
             plt.show(block=False)
         if self.save_image:
-            filename = (self.final_colormap.name + '_' + str(self.num_levels) + 'levels_' + '_'.join(['{:.2f}'.format(i) for i in self.octave_powers[1:]]) +
+            filename = (self.final_colormap.name + '_' + str(self.num_colormap_levels) + 'levels_' + '_'.join(['{:.2f}'.format(i) for i in self.octave_powers[1:]]) +
                 '_stretch' + str(self.stretch_value) + '_exponent' + '{:.0f}'.format(self.rescaling_exponent))
             if self.add_cells:
                 filename += '_cellfield_voronoi'
             filename += '_seed' + str(self.seed)+'.png'
             if self.output_directory is None:
-                output_directory_temp = os.path.join(os.getcwd(),'paint_pour_output_images')
+                output_directory_temp = os.path.join('./output_data/')
             else:
                 output_directory_temp = self.output_directory
             if not os.path.exists(output_directory_temp):
@@ -143,7 +116,56 @@ class PaintPour:
         elapsed_time = round(time.time() - start_time, 2)
         print('Elapsed Time: ' + str(elapsed_time) + ' seconds')
         return self.paint_pour_surface
-    # Removed stray docstring and return statement outside functions
+
+    def pick_paint_pour_colormap(self):
+        '''Given the parameters of this PaintPour, pick a colormap to use'''
+
+        if self.cmap_name == 'custom':
+            if self.custom_cmap_colors is None:
+                self.custom_cmap_colors = ['#33192F', '#803D75', '#CF2808', '#FEE16E', '#6AA886', '#5CE5FB', '#1A1941']
+            colors = self.custom_cmap_colors.copy()
+            self.base_colormap = make_custom_colormap(colors=colors, show_plot=False)
+        else:
+            self.base_colormap = plt.cm.get_cmap(self.cmap_name)
+        if self.show_intermediate_plots:
+            plot_colormap(self.base_colormap, title='Your base colormap, ' + self.base_colormap.name)
+        if self.num_colormap_levels == 'continuous':
+            self.final_colormap = self.base_colormap.copy()
+        else:
+            colors = np.random.randint(low=0, high=256, size=self.num_colormap_levels)
+            nodes = np.sort(np.random.uniform(low=0, high=1, size=len(colors) - 1))
+            self.final_colormap = make_custom_segmented_colormap(colors=self.base_colormap(colors), nodes=[0] + list(nodes) + [1], show_plot=self.show_intermediate_plots, cmap_name=self.base_colormap.name)
+
+    def assign_unspecified_parameters(self):
+        '''Go through the paramters for this paint pour and intelligently assign the ones
+        that were not explicitly specified'''
+
+        if self.seed is None:
+            self.seed = np.random.randint(1, int(1e8))
+
+        if self.prominent_cells:
+            self.rescaling_exponent = 1
+            self.add_cells = True
+            self.num_colormap_levels = 'continuous'
+
+        if self.octave_powers is None:
+            self.octave_powers = [1,
+                np.round(np.random.uniform(0.1, 0.5), 1),
+                np.round(np.random.uniform(0.0, 0.1), 2),
+                np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])]
+            
+        if self.stretch_value is None:
+            self.stretch_value = np.random.randint(-2, 3)
+
+        if self.rescaling_exponent is None:
+            self.rescaling_exponent = 10 ** np.random.uniform(0.1, 3)
+
+        if self.cmap_name in ['any', None]:
+            self.base_colormap = pick_random_colormap(show_plot=False)
+            self.cmap_name = self.base_colormap.name
+
+        if self.num_colormap_levels is None:
+            self.num_colormap_levels = np.random.choice([30, 40, 50])
 
 #Rescale an array from 0-1 with a power law, just like you would do in DS9
 def power_rescaler(y,exponent):
@@ -395,8 +417,10 @@ def fractal_noise(image_dimensions, relative_powers, stretch, show_perlin_noise_
     -------
     image : np.ndarray
         The generated fractal noise image, normalized to [0, 1].
+    octave_cube : np.ndarray (optional)
+        An image cube containing each octave that makes up the final returned image.
     vectors : list
-        List containing vector grid coordinates and directions from the last octave.
+        List containing vector grid coordinates and vector directions from the last octave.
     """
     num_octaves = len(relative_powers)
     image = np.zeros((image_dimensions[1], image_dimensions[0]))
@@ -406,8 +430,9 @@ def fractal_noise(image_dimensions, relative_powers, stretch, show_perlin_noise_
         print(f'\t Making octave {i} of {num_octaves}')
         if relative_powers[i] > 0:
             perlin_image, vectors = perlin_field(image_dimensions, i, stretch, show_plots=show_perlin_noise_plots)
-            image += relative_powers[i] * perlin_image
-            octave_images.append(perlin_image)
+            octave_to_add = relative_powers[i] * perlin_image
+            image += octave_to_add
+            octave_images.append(octave_to_add)
         else:
             octave_images.append(np.zeros_like(image))
     image = (image - np.min(image)) / (np.max(image) - np.min(image))
@@ -420,8 +445,8 @@ def fractal_noise(image_dimensions, relative_powers, stretch, show_perlin_noise_
         fig.tight_layout()
         plt.show(block=False)
     if return_octaves:
-        octave_stack = np.stack(octave_images, axis=0)
-        return (image.astype('float32'), octave_stack), vectors
+        octave_cube = np.stack(octave_images, axis=0)
+        return (image.astype('float32'), octave_cube), vectors
     return image.astype('float32'), vectors
 
 def _log_rescale_helper(input_values, exponent):
