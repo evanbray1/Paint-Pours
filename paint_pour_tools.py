@@ -68,7 +68,6 @@ def generate_paint_pour_image(
     # Start a timer to track runtime
     start_time = time.time()
 
-
     if add_cells is True:
         warnings.warn('WARNING: the add_cells parameter isnt fully implemented yet. Try setting prominent_cells=True instead for now')
 
@@ -99,6 +98,7 @@ def generate_paint_pour_image(
                                              show_fractal_noise_plot=show_intermediate_plots, show_perlin_noise_plots=show_intermediate_plots)
 
     # Make a colormap to use for this image
+    #TODO, refactor this chunk into its own section.
     if num_levels is None:
         num_levels = np.random.choice([30, 40, 50])
     if cmap_name == 'custom':
@@ -203,8 +203,8 @@ def generate_paint_pour_image(
             # filename += '_gausssmooth' + str(gauss_smoothing_sigma) + '_threshold' + str(threshold_percentile)
             filename += f'_cellfieldcoeff{cell_field_coefficient:.1f}_vorpoints{num_voronoi_points:d}'
         filename += '_seed' + str(seed)+'.png'
-        if output_directory is None:
-            output_directory_temp = os.path.join(os.getcwd(),'paint_pour_output_images')
+        if output_directory is None: # If no output directory is specified, use a directory within the current working directory
+            output_directory_temp = os.path.join('./output_data/') 
         else:
             #This might seem redundant, but I anticipate adding the ability to auto-create output directory based on colormap name, 
             # in which case we'll want a temporary output_directory variable.
