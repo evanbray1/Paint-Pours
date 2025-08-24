@@ -7,12 +7,14 @@ from scipy.ndimage import gaussian_filter
 import os
 import time
 import warnings
+import csv
 
 class PaintPour:
     def __init__(self,
                  image_dimensions,
                  display_final_image=True,
                  save_image=True,
+                 save_metadata=True,
                  show_intermediate_plots=False,
                  add_cells=False,
                  cmap_name='any',
@@ -39,6 +41,7 @@ class PaintPour:
         self.rescaling_exponent = rescaling_exponent
         self.num_colormap_levels = num_colormap_levels
         self.prominent_cells = prominent_cells
+        self.save_metadata = save_metadata
         self.kwargs = kwargs
         
         # Output attributes
@@ -68,7 +71,9 @@ class PaintPour:
         self.noise_octaves = noise_map_tuple[1]
 
         # Apply some log-scaling to the noise map
-        self.paint_pour_surface = log_rescaler(self.noise_map, exponent=self.rescaling_exponent, show_plot=self.show_intermediate_plots)
+        self.paint_pour_surface = log_rescaler(input_values = self.noise_map, 
+                                    exponent=self.rescaling_exponent, 
+                                    show_plot=self.show_intermediate_plots)
 
         # Generate a colormap for this image
         self.pick_paint_pour_colormap()
@@ -92,7 +97,7 @@ class PaintPour:
                 self.paint_pour_surface[ind] = 1.01
                 self.final_colormap.set_over(self.base_colormap(np.random.uniform(0,1)))
 
-        # Display and save
+        # Display and save the image (as well a a separate file of its metadata, if desired)
         if self.display_final_image:
             fig, ax = plt.subplots(1, figsize=(self.image_dimensions[0] / 120, self.image_dimensions[1] / 120))
             ax = plt.Axes(fig, [0., 0., 1., 1.])
@@ -100,19 +105,23 @@ class PaintPour:
             ax.imshow(self.paint_pour_surface, cmap=self.final_colormap, origin='lower', vmin=0, vmax=1)
             plt.show(block=False)
         if self.save_image:
-            filename = (self.final_colormap.name + '_' + str(self.num_colormap_levels) + 'levels_' + '_'.join(['{:.2f}'.format(i) for i in self.octave_powers[1:]]) +
+            self.filename = (self.final_colormap.name + '_' + str(self.num_colormap_levels) + 'levels_' + '_'.join(['{:.2f}'.format(i) for i in self.octave_powers[1:]]) +
                 '_stretch' + str(self.stretch_value) + '_exponent' + '{:.0f}'.format(self.rescaling_exponent))
             if self.add_cells:
-                filename += '_cellfield_voronoi'
-            filename += '_seed' + str(self.seed)+'.png'
+                self.filename += '_cellfield_voronoi'
+            self.filename += '_seed' + str(self.seed)+'.png'
             if self.output_directory is None:
-                output_directory_temp = os.path.join('./output_data/')
-            else:
-                output_directory_temp = self.output_directory
-            if not os.path.exists(output_directory_temp):
-                os.makedirs(output_directory_temp)
-            fig.savefig(os.path.join(output_directory_temp,filename), dpi=120)
-            print(f'***Image saved to: {output_directory_temp}')
+                self.output_directory = os.path.join('./output_data/')
+            if not os.path.exists(self.output_directory):
+                os.makedirs(self.output_directory)
+            fig.savefig(os.path.join(self.output_directory,self.filename), dpi=120)
+            print(f'***Image saved to: {self.output_directory}')
+
+        if self.save_metadata is True:
+            print(f'Saving metadata to .csv file')
+            metadata_filename = self.filename[:-4]+'.csv'
+            self.save_metadata_to_csv(filename=metadata_filename)
+
         elapsed_time = round(time.time() - start_time, 2)
         print('Elapsed Time: ' + str(elapsed_time) + ' seconds')
         return self.paint_pour_surface
@@ -166,6 +175,48 @@ class PaintPour:
 
         if self.num_colormap_levels is None:
             self.num_colormap_levels = np.random.choice([30, 40, 50])
+
+    def save_metadata_to_csv(self, filename):
+        """
+        Saves all attributes that are NOT 2D/3D arrays to a .csv file with the same filename as the accompanying image.
+        """
+        def is_2d_or_3d_array(value):
+            if isinstance(value, np.ndarray):
+                return value.ndim >= 2
+            # Check for lists-of-lists (2D or 3D, not handling ragged lists robustly)
+            if isinstance(value, list):
+                if value and isinstance(value[0], list):
+                    # Could also check for 3D
+                    if value and isinstance(value, list):
+                        return True
+                    return True
+            return False
+
+        attributes = {} # Initialize a dictionary that we will fill out with metadata
+
+        # Loop through the class attributes one at a time
+        for attr in dir(self):
+            if attr.startswith('__') or callable(getattr(self, attr)): # Ignore the methods and Python's built-in attributes
+                continue
+            
+            value = getattr(self, attr) # Grab the attribute
+            if is_2d_or_3d_array(value): # Make sure it's not an image or image cube (we don't want to save that here)
+                continue
+
+            # For unrepresentable types, do a safe string conversion
+            try:
+                value_str = str(value)
+            except Exception:
+                value_str = '<unrepresentable>'
+            attributes[attr] = value_str
+
+        # Define the absolute filepath of the file save location
+        absolute_filepath = os.path.join(self.output_directory,filename)
+        with open(absolute_filepath, 'w', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow(['attribute', 'value'])
+            for attribute_name in sorted(attributes):
+                writer.writerow([attribute_name, attributes[attribute_name]])
 
 #Rescale an array from 0-1 with a power law, just like you would do in DS9
 def power_rescaler(y,exponent):
