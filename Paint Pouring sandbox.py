@@ -1,7 +1,8 @@
 import paint_pour_tools as pptools
 from matplotlib import use
 import matplotlib.pyplot as plt
-use('QtAgg') # Depending on which IDE you're using, you might need to change this line, or comment it out entirely.
+# Depending on which IDE you're using, you might need to change this line, or comment it out entirely.
+use('QtAgg')
 # Show the plots in the iPython console
 # %matplotlib inline
 
@@ -15,21 +16,23 @@ use('QtAgg') # Depending on which IDE you're using, you might need to change thi
 # Example: To access the noise map for analysis, use: paint_pour.noise_map
 # Example: To change the colormap, set custom_cmap_colors or cmap_name.
 
-######### USER-DEFINED VARIABLES #########
+# ######## USER-DEFINED VARIABLES #########
 image_dimensions = [800, 800]
 display_final_image = True        # Display the image on the screen?
 save_image = True                 # Save a .png copy of your image?
 num_images = 1                    # How many images to produce?
 show_intermediate_plots = False   # Show intermediate results for troubleshooting?
-seed = None                       # Set a seed for reproducibility. If None, a seed is chosen randomly.
+# Set a seed for reproducibility. If None, a seed is chosen randomly.
+seed = None
 cmap_name = 'any'              # Colormap: 'any', 'custom', or a matplotlib colormap name
 output_directory = './testing/'
 
 
 ##########################################
 for i in range(num_images):
-    plt.close('all') # Close all existing plots before starting a new image
-    plt.pause(0.1)  # In VSCode, a short pause ensures plot windows close properly
+    plt.close('all')  # Close all existing plots before starting a new image
+    # In VSCode, a short pause ensures plot windows close properly
+    plt.pause(0.1)
     print(f'Currently making image {i+1} of {num_images}')
 
     # Create a PaintPour class object with your chosen parameters
