@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial import Voronoi, voronoi_plot_2d
 import cv2
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from matplotlib.colors import LinearSegmentedColormap
 from scipy.ndimage import gaussian_filter
 import os
 import time
@@ -106,8 +106,8 @@ class PaintPour:
             ax.imshow(self.paint_pour_surface, cmap=self.final_colormap, origin='lower', vmin=0, vmax=1)
             plt.show(block=False)
         if self.save_image:
-            self.filename = (self.final_colormap.name + '_' + str(self.num_colormap_levels) + 'levels_' + '_'.join(['{:.2f}'.format(i) for i in self.octave_powers[1:]]) +
-                             '_stretch' + str(self.stretch_value) + '_exponent' + '{:.0f}'.format(self.rescaling_exponent))
+            self.filename = (f"{self.final_colormap.name}_{self.num_colormap_levels}levels_" + "_".join([f"{i:.2f}" for i in self.octave_powers[1:]])
+                            + f"_stretch{self.stretch_value}_exponent{self.rescaling_exponent:.0f}")
             if self.add_cells:
                 self.filename += '_cellfield_voronoi'
             self.filename += '_seed' + str(self.seed) + '.png'
@@ -119,7 +119,7 @@ class PaintPour:
             print(f'***Image saved to: {self.output_directory}')
 
         if self.save_metadata is True:
-            print(f'Saving metadata to .csv file')
+            print('Saving metadata to .csv file')
             metadata_filename = self.filename[:-4] + '.csv'
             self.save_metadata_to_csv(filename=metadata_filename)
 

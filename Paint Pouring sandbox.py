@@ -35,7 +35,7 @@ for i in range(num_images):
     plt.close('all')  # Close all existing plots before starting a new image
     # In VSCode, a short pause ensures plot windows close properly
     plt.pause(0.1)
-    print(f'Currently making image {i+1} of {num_images}')
+    print(f'Currently making image {i + 1} of {num_images}')
 
     # Create a PaintPour class object with your chosen parameters
     paint_pour = pptools.PaintPour(
