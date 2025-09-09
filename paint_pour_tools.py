@@ -26,6 +26,7 @@ class PaintPour:
                  stretch_value=None,
                  rescaling_exponent=None,
                  num_colormap_levels=None,
+                 num_continuous_levels=None,
                  prominent_cells=False,
                  **kwargs):
         self.image_dimensions = image_dimensions
@@ -41,9 +42,12 @@ class PaintPour:
         self.stretch_value = stretch_value
         self.rescaling_exponent = rescaling_exponent
         self.num_colormap_levels = num_colormap_levels
+        self.num_continuous_levels = num_continuous_levels
         self.prominent_cells = prominent_cells
         self.save_metadata = save_metadata
         self.kwargs = kwargs
+
+        np.random.seed(self.seed)  # Set the seed for the random number generator
 
         # Output attributes
         self.base_colormap = None
@@ -57,7 +61,6 @@ class PaintPour:
 
     def generate(self):
         start_time = time.time()  # Start a timer for performance-tracking purposes
-        np.random.seed(self.seed)  # Set the seed for the random number generator
 
         # Fractal noise and octave slices
         # Generate noise and octaves
@@ -106,7 +109,7 @@ class PaintPour:
             ax.imshow(self.paint_pour_surface, cmap=self.final_colormap, origin='lower', vmin=0, vmax=1)
             plt.show(block=False)
         if self.save_image:
-            self.filename = (f"{self.final_colormap.name}_{self.num_colormap_levels}levels_" + "_".join([f"{i:.2f}" for i in self.octave_powers[1:]])
+            self.filename = (f"{self.base_colormap.name}_{self.num_colormap_levels}levels_" + "_".join([f"{i:.2f}" for i in self.octave_powers[1:]])
                             + f"_stretch{self.stretch_value}_exponent{self.rescaling_exponent:.0f}")
             if self.add_cells:
                 self.filename += '_cellfield_voronoi'
@@ -130,6 +133,7 @@ class PaintPour:
     def pick_paint_pour_colormap(self):
         '''Given the parameters of this PaintPour, pick a colormap to use'''
 
+        # Pick a base colormap from which the segmented colormap will be produced
         if self.cmap_name == 'custom':
             if self.custom_cmap_colors is None:
                 self.custom_cmap_colors = ['#33192F', '#803D75', '#CF2808', '#FEE16E', '#6AA886', '#5CE5FB', '#1A1941']
@@ -137,14 +141,43 @@ class PaintPour:
             self.base_colormap = make_custom_colormap(colors=colors, show_plot=False)
         else:
             self.base_colormap = plt.cm.get_cmap(self.cmap_name)
+        self.base_colormap = self.base_colormap.resampled(1000)
+
+        # Plot the base colormap, if desired            
         if self.show_intermediate_plots:
-            plot_colormap(self.base_colormap, title='Your base colormap, ' + self.base_colormap.name)
-        if self.num_colormap_levels == 'continuous':
-            self.final_colormap = self.base_colormap.copy()
-        else:
-            colors = np.random.randint(low=0, high=256, size=self.num_colormap_levels)
+            plot_colormap(cmap=self.base_colormap, plot_title='Your base colormap, ' + self.base_colormap.name)
+
+        # Make a segmented colormap, UNLESS the user specified 'continuous' for num_colormap_levels
+        if self.num_colormap_levels != 'continuous':
+            # Using the base colormap as a template, pick random colors and nodes
+            colors = np.random.randint(low=0, high=self.base_colormap.N, size=self.num_colormap_levels)
             nodes = np.sort(np.random.uniform(low=0, high=1, size=len(colors) - 1))
-            self.final_colormap = make_custom_segmented_colormap(colors=self.base_colormap(colors), nodes=[0] + list(nodes) + [1], show_plot=self.show_intermediate_plots, cmap_name=self.base_colormap.name)
+
+            # Make the necessary duplications to prepare this array of colors/nodes for use in a segmented colormap
+            colors, nodes = convert_colors_and_nodes_for_segmented_cmap(colors, nodes)
+
+            # If num_continuous_levels is specified, delete that many color/node pairs 
+            # to result in that portion of the colormap becoming continuous
+            if self.num_continuous_levels is not None and self.num_continuous_levels > 0:
+                for i in range(self.num_continuous_levels):
+                    print(i)
+                    index_to_remove = np.random.randint(1, len(colors) - 2)  # Avoid removing the first or last color/node
+                    colors = np.delete(colors, index_to_remove)
+                    nodes = np.delete(nodes, index_to_remove)
+
+            self.final_colormap = make_custom_colormap(colors=self.base_colormap(colors), nodes=nodes,
+                                        cmap_name=self.base_colormap.name, show_plot=False)
+
+            # Plot the final segmented colormap, if desired
+            if self.show_intermediate_plots:
+                plot_colormap(cmap=self.final_colormap, nodes=nodes, plot_title='Your custom segmented colormap')
+
+        else:
+            self.final_colormap = self.base_colormap.copy()
+
+        # Resample the final colormap to ensure it has plenty of discrete levels. 
+        # The default of 256 levels was not enough
+        self.final_colormap = self.final_colormap.resampled(1000)
 
     def assign_unspecified_parameters(self):
         '''Go through the paramters for this paint pour and intelligently assign the ones
@@ -752,30 +785,7 @@ def pick_random_colormap(print_choice=False, show_plot=False):
     return cmap
 
 
-def plot_colormap(cmap, title='Your colormap'):
-    """
-    Display a matplotlib colormap as a horizontal colorbar.
-
-    Parameters
-    ----------
-    cmap : Colormap
-        Matplotlib colormap to display.
-    title : str, optional
-        Title for the plot (default is 'Your colormap').
-
-    Returns
-    -------
-    The figure and axis objects of the colormap plot.
-    """
-    fig_cmap, ax_cmap = plt.subplots(figsize=(12, 2))
-    ax_cmap.imshow(np.outer(np.ones(100), np.arange(0, 1, 0.001)), cmap=cmap, origin='lower', extent=[0, 1, 0, 0.1])
-    ax_cmap.set_title(title)
-    ax_cmap.set_yticks([])
-    fig_cmap.tight_layout()
-    return fig_cmap, ax_cmap
-
-
-def make_custom_colormap(colors=None, nodes=None, show_plot=False):
+def make_custom_colormap(colors=None, nodes=None, cmap_name=None, show_plot=False):
     """
     Create a custom continuous colormap from a list of colors and nodes.
 
@@ -795,23 +805,22 @@ def make_custom_colormap(colors=None, nodes=None, show_plot=False):
     cmap_custom : LinearSegmentedColormap
         The generated custom colormap.
     """
-    print('...Making a custom continuous colormap')
+    print('...Making a custom colormap')
+
+    # Pick some values for colors and nodes if they are not specified
     if colors is None:
         print('WARNING: No input colors specified. Picking some default values....')
         colors = ['#33192F', '#803D75', '#CF2808', '#FEE16E', '#6AA886', '#5CE5FB', '#1A1941']
     if nodes is None:
         print('WARNING: No input nodes specified. Picking an evenly-spaced array....')
         nodes = np.linspace(0, 1.0, len(colors))  
-    cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes, colors)))
+
+    # Generate the colormap from the input colors and nodes
+    cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes, colors)), N=1000)
 
     if show_plot == True:
-        fig_cmap, ax_cmap = plt.subplots(figsize=(12, 2))
-        ax_cmap.imshow(np.outer(np.ones(100), np.arange(0, 1, 0.001)), cmap=cmap_custom, origin='lower', extent=[0, 1, 0, 0.1])
-        ax_cmap.set_title('Your custom colormap')
-        ax_cmap.set_xticks(ticks=np.array(nodes))
-        ax_cmap.set_xticklabels(['{:.2f}'.format(node) for node in nodes], rotation=60)
-        ax_cmap.set_yticks([])
-        fig_cmap.tight_layout()
+        plot_colormap(cmap=cmap_custom, nodes=nodes, plot_title='Your custom colormap')
+
     return cmap_custom
 
 
@@ -847,32 +856,80 @@ def make_custom_segmented_colormap(colors=None, nodes=None, show_plot=False, cma
         print('WARNING: No input nodes specified. Picking an evenly-spaced array....')
         nodes = np.linspace(0, 1.0, len(colors) + 1)  
 
-    # Because we're making a segmented colormap, we must duplicate each color in the colors array, as well as the inner noes of the nodes array.
-    # This is because we must specify the color and value at each segment boundary
-    # For example, if nodes = [0, 0.4, 0.8, 1], then nodes_new = [0, 0.4, 0.4, 0.8, 0.8, 1]. 
-    colors = [tuple(color[:-1]) for color in colors]
-    colors_new = []
-    nodes_new = []
-    for i in range(len(colors)):
-        colors_new.extend([colors[i], colors[i]])
-        # colors_new.append(colors[i])
-    for i in range(len(nodes)):
-        nodes_new.extend([nodes[i], nodes[i]])
-        # nodes_new.append(nodes[i])
-    nodes_new = nodes_new[1:-1]
+    colors_new, nodes_new = convert_colors_and_nodes_for_segmented_cmap(colors, nodes)
 
     cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes_new, colors_new)))
     cmap_custom.name = cmap_name
 
     if show_plot == True:
-        fig_cmap, ax_cmap = plt.subplots(figsize=(12, 2))
-        ax_cmap.imshow(np.outer(np.ones(100), np.arange(0, 1, 0.001)), cmap=cmap_custom, origin='lower', extent=[0, 1, 0, 0.1])
-        ax_cmap.set_title('Your custom segmented colormap')
-        ax_cmap.set_xticks(ticks=np.array(nodes))
-        ax_cmap.set_xticklabels(['{:.2f}'.format(node) for node in nodes], rotation=60)
-        ax_cmap.set_yticks([])
-        fig_cmap.tight_layout()
+        plot_colormap(cmap=cmap_custom, nodes=nodes, plot_title='Your custom segmented colormap')
+
     return cmap_custom
+
+def convert_colors_and_nodes_for_segmented_cmap(colors, nodes):
+    """
+    This function takes a list of colors and a list of nodes, and returns new lists with the required duplications for use in LinearSegmentedColormap.from_list().
+
+    In a segmented colormap, each color and node must be duplicated at segment boundaries to specify the color and value at each discontinuity. 
+    For example, if nodes = [0, 0.4, 0.8, 1], then nodes_new = [0, 0.4, 0.4, 0.8, 0.8, 1].
+
+    Parameters
+    ----------
+    colors : list
+        List of color tuples (typically RGBA) for the colormap.
+    nodes : list or np.ndarray
+        List of node positions (values between 0 and 1) indicating where each color should be placed in the colormap.
+
+    Returns
+    -------
+    colors_new : list
+        Duplicated list of colors for segment boundaries.
+    nodes_new : list
+        Duplicated list of node positions for segment boundaries.
+    """
+    nodes = [0] + list(nodes) + [1]
+    # colors = [tuple(color[:-1]) for color in colors]
+    colors_new = []
+    nodes_new = []
+    for i in range(len(colors)):
+        colors_new.extend([colors[i], colors[i]])
+    for i in range(len(nodes)):
+        nodes_new.extend([nodes[i], nodes[i]])
+    nodes_new = nodes_new[1:-1]  # Remove the first and last duplicated nodes, which are not needed
+
+    return colors_new, nodes_new
+
+def plot_colormap(cmap, nodes=None, plot_title=None):
+    """
+    Display a matplotlib colormap as a horizontal colorbar.
+
+    Parameters
+    ----------
+    cmap : matplotlib.colors.Colormap
+        The colormap to display.
+    nodes : list or array-like, optional
+        Positions along the colormap to mark as ticks on the colorbar (values between 0 and 1).
+    plot_title : str, optional
+        Title for the plot. If None, uses the colormap's name.
+
+    Returns
+    -------
+    fig, ax : matplotlib.figure.Figure, matplotlib.axes.Axes
+        The figure and axes objects of the plot.
+    """
+
+    fig, ax = plt.subplots(figsize=(12, 2))
+    ax.imshow(np.outer(np.ones(100), np.arange(0, 1, 0.001)), cmap=cmap, origin='lower', extent=[0, 1, 0, 0.1])
+    if nodes is not None:
+        ax.set_xticks(ticks=np.array(nodes))
+        ax.set_xticklabels(['{:.2f}'.format(node) for node in nodes], rotation=60)
+    ax.set_yticks([])
+    if plot_title is None:
+        plot_title = cmap.name
+    ax.set_title(plot_title)
+    fig.tight_layout()
+    plt.show(block=False)
+    return fig, ax
 
 
 def make_cell_image(image_dimensions, num_voronoi_points=400, gauss_smoothing_sigma=6, threshold_percentile=70, minimum_cell_area=25,
@@ -968,8 +1025,6 @@ def make_cell_image(image_dimensions, num_voronoi_points=400, gauss_smoothing_si
     image_final = (image_final - np.min(image_final)) / (np.max(image_final) - np.min(image_final))
 
     return image_final
-
-# Identify the centroids of each cell
 
 
 def calculate_cell_centroids(thresholded_cell_image):

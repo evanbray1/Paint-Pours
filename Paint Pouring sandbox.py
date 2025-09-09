@@ -21,13 +21,13 @@ use('QtAgg')
 # ######## USER-DEFINED VARIABLES #########
 image_dimensions = [800, 800]
 display_final_image = True        # Display the image on the screen?
-save_image = True                 # Save a .png copy of your image?
+save_image = True                # Save a .png copy of your image?
 num_images = 1                    # How many images to produce?
-show_intermediate_plots = False   # Show intermediate results for troubleshooting?
+show_intermediate_plots = True  # Show intermediate results for troubleshooting?
 # Set a seed for reproducibility. If None, a seed is chosen randomly.
 seed = None
 cmap_name = 'any'              # Colormap: 'any', 'custom', or a matplotlib colormap name
-output_directory = './testing/'
+output_directory = './outputs/'
 
 
 ##########################################
@@ -45,8 +45,9 @@ for i in range(num_images):
         show_intermediate_plots=show_intermediate_plots,
         cmap_name=cmap_name,
         output_directory=output_directory,
-        seed=seed
+        seed=seed,
     )
 
     # Generate the paint pour
     paint_pour_image = paint_pour.generate()
+    
