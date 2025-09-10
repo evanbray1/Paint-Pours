@@ -6,8 +6,6 @@ use('QtAgg')
 # Show the plots in the iPython console
 # %matplotlib inline
 
-# Test comment for test branch
-
 # --- HOW TO USE THIS SANDBOX ---
 # 1. Adjust the parameters below to experiment with different paint pour styles.
 # 2. For each image, a new PaintPour object is created and .generate() is called.
@@ -20,13 +18,13 @@ use('QtAgg')
 
 # ######## USER-DEFINED VARIABLES #########
 image_dimensions = [800, 800]
-display_final_image = True        # Display the image on the screen?
+display_final_image = False        # Display the image on the screen?
 save_image = True                # Save a .png copy of your image?
 num_images = 30                   # How many images to produce?
-show_intermediate_plots = True  # Show intermediate results for troubleshooting?
+show_intermediate_plots = False  # Show intermediate results for troubleshooting?
 # Set a seed for reproducibility. If None, a seed is chosen randomly.
 seed = None
-cmap_name = 'berlin'              # Colormap: 'any', 'custom', or a matplotlib colormap name
+cmap_name = 'any'              # Colormap: 'any', 'custom', or a matplotlib colormap name
 output_directory = './outputs/'
 
 
@@ -45,7 +43,6 @@ for i in range(num_images):
         cmap_name=cmap_name,
         output_directory=output_directory,
         seed=seed,
-        num_continuous_levels=0,
     )
 
     # Generate the paint pour
