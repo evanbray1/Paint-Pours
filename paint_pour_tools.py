@@ -29,6 +29,9 @@ class PaintPour:
                  num_continuous_levels=None,
                  prominent_cells=False,
                  **kwargs):
+        '''A class for generating paint pour images.'''
+        
+        # Assign parameter
         self.image_dimensions = image_dimensions
         self.display_final_image = display_final_image
         self.save_image = save_image
@@ -47,17 +50,18 @@ class PaintPour:
         self.save_metadata = save_metadata
         self.kwargs = kwargs
 
-        np.random.seed(self.seed)  # Set the seed for the random number generator
+        if self.seed is not None:
+            np.random.seed(self.seed)  # Set the seed for the random number generator
 
-        # Output attributes
+        # Intelligently pick unspecified parameters
+        self.assign_unspecified_parameters()
+
+        # initialize some output attributes
         self.base_colormap = None
         self.final_colormap = None
         self.noise_map = None
         self.noise_octaves = None  # 3D array: each 2D slice is one octave
         self.paint_pour_surface = None
-
-        # Intelligently pick some basic parameters if the user didn't specify them
-        self.assign_unspecified_parameters()
 
     def generate(self):
         start_time = time.time()  # Start a timer for performance-tracking purposes
@@ -101,16 +105,19 @@ class PaintPour:
                 self.paint_pour_surface[ind] = 1.01
                 self.final_colormap.set_over(self.base_colormap(np.random.uniform(0, 1)))
 
+        # Turn off interactive plotting if you don't want to see the final image displayed on-screen
+        if not self.display_final_image:
+            plt.ioff()
+            
         # Display and save the image (as well a a separate file of its metadata, if desired)
-        if self.display_final_image:
-            fig, ax = plt.subplots(1, figsize=(self.image_dimensions[0] / 120, self.image_dimensions[1] / 120))
-            ax = plt.Axes(fig, [0., 0., 1., 1.])
-            fig.add_axes(ax)
-            ax.imshow(self.paint_pour_surface, cmap=self.final_colormap, origin='lower', vmin=0, vmax=1)
-            plt.show(block=False)
+        fig, ax = plt.subplots(1, figsize=(self.image_dimensions[0] / 120, self.image_dimensions[1] / 120))
+        ax = plt.Axes(fig, [0., 0., 1., 1.])
+        fig.add_axes(ax)
+        ax.imshow(self.paint_pour_surface, cmap=self.final_colormap, origin='lower', vmin=0, vmax=1)
+        plt.show(block=False)
         if self.save_image:
             self.filename = (f"{self.base_colormap.name}_{self.num_colormap_levels}levels_" + "_".join([f"{i:.2f}" for i in self.octave_powers[1:]])
-                            + f"_stretch{self.stretch_value}_exponent{self.rescaling_exponent:.0f}")
+                            + f"_blend{self.num_continuous_levels}_exponent{self.rescaling_exponent:.0f}")
             if self.add_cells:
                 self.filename += '_cellfield_voronoi'
             self.filename += '_seed' + str(self.seed) + '.png'
@@ -125,6 +132,10 @@ class PaintPour:
             print('Saving metadata to .csv file')
             metadata_filename = self.filename[:-4] + '.csv'
             self.save_metadata_to_csv(filename=metadata_filename)
+        
+        # Turn interactive plotting back on if it was turned off earlier 
+        # if not self.display_final_image:
+        #     plt.ion()
 
         elapsed_time = round(time.time() - start_time, 2)
         print('Elapsed Time: ' + str(elapsed_time) + ' seconds')
@@ -141,7 +152,8 @@ class PaintPour:
             self.base_colormap = make_custom_colormap(colors=colors, show_plot=False)
         else:
             self.base_colormap = plt.cm.get_cmap(self.cmap_name)
-        self.base_colormap = self.base_colormap.resampled(1000)
+        self.base_colormap = self.base_colormap.resampled(10000)
+        print(f'    Using base colormap: {self.base_colormap.name}')
 
         # Plot the base colormap, if desired            
         if self.show_intermediate_plots:
@@ -159,17 +171,27 @@ class PaintPour:
             # If num_continuous_levels is specified, delete that many color/node pairs 
             # to result in that portion of the colormap becoming continuous
             if self.num_continuous_levels is not None and self.num_continuous_levels > 0:
-                for i in range(self.num_continuous_levels):
-                    print(i)
-                    index_to_remove = np.random.randint(1, len(colors) - 2)  # Avoid removing the first or last color/node
-                    colors = np.delete(colors, index_to_remove)
-                    nodes = np.delete(nodes, index_to_remove)
+                # for i in range(self.num_continuous_levels):
+                # At the boundary between two colors, there are two nodes,
+                # one demarcating the end of one color and one demarcating the beginning of another.
+                # Determine the indices of the first of each of these pairs. This list of indices will be candidates
+                # for deletion, resulting in a continuous change from the first color to the second.
+                repeated_indices = [i for i in range(len(nodes) - 1) if nodes[i] == nodes[i + 1]]
 
+                # If we don't do this, we risk ending up with a colormap with far fewer color changes than the user intended 
+                # based on their specified num_colormap_levels parameter.
+                indices_to_remove = np.random.choice(repeated_indices, size=np.min([len(repeated_indices), self.num_continuous_levels]), 
+                                                    replace=False)
+                colors = np.delete(colors, indices_to_remove)
+                nodes = np.delete(nodes, indices_to_remove)
+
+            print(f'    Final colormap will have {self.num_colormap_levels} colors, with {self.num_continuous_levels} continuous blends')
             self.final_colormap = make_custom_colormap(colors=self.base_colormap(colors), nodes=nodes,
                                         cmap_name=self.base_colormap.name, show_plot=False)
 
             # Plot the final segmented colormap, if desired
             if self.show_intermediate_plots:
+                self.final_colormap = self.final_colormap.resampled(10000)
                 plot_colormap(cmap=self.final_colormap, nodes=nodes, plot_title='Your custom segmented colormap')
 
         else:
@@ -177,38 +199,55 @@ class PaintPour:
 
         # Resample the final colormap to ensure it has plenty of discrete levels. 
         # The default of 256 levels was not enough
-        self.final_colormap = self.final_colormap.resampled(1000)
+        self.final_colormap = self.final_colormap.resampled(10000)
 
     def assign_unspecified_parameters(self):
-        '''Go through the paramters for this paint pour and intelligently assign the ones
-        that were not explicitly specified'''
-
+        '''Go through the paramters for this paint pour and randomly pick a value for each, but only assign that value
+        if it was not explicitly specified earlier. This allows the seed mechanism to work as intended.
+        
+        # TODO, the seed functionality currently isnt working. Fix it so the user can put in the seed of an existing image 
+        # and have all parameters be the same, EXCEPT for the ones they specify manually'''
+        
+        temporary_random_variable = np.random.randint(1, int(1e8))
         if self.seed is None:
-            self.seed = np.random.randint(1, int(1e8))
+            self.seed = temporary_random_variable
 
         if self.prominent_cells:
             self.rescaling_exponent = 1
             self.add_cells = True
             self.num_colormap_levels = 'continuous'
 
-        if self.octave_powers is None:
-            self.octave_powers = [1,
+        temporary_random_variable = [1,
                                   np.round(np.random.uniform(0.1, 0.5), 1),
                                   np.round(np.random.uniform(0.0, 0.1), 2),
                                   np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])]
+        if self.octave_powers is None:
+            self.octave_powers = temporary_random_variable
 
+        temporary_random_variable = np.random.randint(-2, 3)
         if self.stretch_value is None:
-            self.stretch_value = np.random.randint(-2, 3)
+            self.stretch_value = temporary_random_variable
 
+        temporary_random_variable = 10 ** np.random.uniform(0.1, 2.6)
         if self.rescaling_exponent is None:
-            self.rescaling_exponent = 10 ** np.random.uniform(0.1, 3)
+            self.rescaling_exponent = temporary_random_variable
 
+        temporary_random_variable = pick_random_colormap(show_plot=False)
         if self.cmap_name in ['any', None]:
-            self.base_colormap = pick_random_colormap(show_plot=False)
+            self.base_colormap = temporary_random_variable
             self.cmap_name = self.base_colormap.name
 
+        temporary_random_variable = np.random.choice([30, 40, 50])
         if self.num_colormap_levels is None:
-            self.num_colormap_levels = np.random.choice([30, 40, 50])
+            self.num_colormap_levels = temporary_random_variable
+
+        # temporary_random_variable = np.random.choice([0.9, 0.4, 0.6], p=[0.5, 0.3, 0.2])
+        temporary_random_variable = 1.0
+        if self.num_continuous_levels is None:
+            continuous_frac = temporary_random_variable
+            self.num_continuous_levels = int(self.num_colormap_levels * continuous_frac)
+            if self.num_colormap_levels == 'continuous':
+                self.num_continuous_levels = 0
 
     def save_metadata_to_csv(self, filename):
         """
@@ -845,7 +884,7 @@ def make_custom_segmented_colormap(colors=None, nodes=None, show_plot=False, cma
         The generated custom segmented colormap.
     """
     print('...Making a custom segmented colormap')
-    # Colors = a list of tuples for colors you want your colormap to be composed of, in RGBA format.
+    # Colors = a list of tuples for colors you want your colormap to be composed of, in RGBA or hex format.
     # Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
     #       -The first and last value must be 0 and 1, respectively.
     #       -For example, if nodes = [0, 0.4, 0.8, 1], the first 40% of your colormap will be color[0], the next 40% will be color[1], and the final 20% will be color[2]
@@ -855,6 +894,12 @@ def make_custom_segmented_colormap(colors=None, nodes=None, show_plot=False, cma
     if nodes is None:
         print('WARNING: No input nodes specified. Picking an evenly-spaced array....')
         nodes = np.linspace(0, 1.0, len(colors) + 1)  
+
+    # Do some data verification
+    elif nodes[0] != 0 or nodes[-1] != 1:
+        raise ValueError('The first and last values in the "nodes" array must be 0 and 1, respectively.')
+    if len(nodes) != (len(colors) + 1):
+        raise ValueError('The length of the "nodes" array must be one greater than the length of the "colors" array.')
 
     colors_new, nodes_new = convert_colors_and_nodes_for_segmented_cmap(colors, nodes)
 
@@ -919,7 +964,7 @@ def plot_colormap(cmap, nodes=None, plot_title=None):
     """
 
     fig, ax = plt.subplots(figsize=(12, 2))
-    ax.imshow(np.outer(np.ones(100), np.arange(0, 1, 0.001)), cmap=cmap, origin='lower', extent=[0, 1, 0, 0.1])
+    ax.imshow(np.outer(np.ones(100), np.arange(0, 1, 0.0001)), cmap=cmap, origin='lower', extent=[0, 1, 0, 0.1])
     if nodes is not None:
         ax.set_xticks(ticks=np.array(nodes))
         ax.set_xticklabels(['{:.2f}'.format(node) for node in nodes], rotation=60)

@@ -22,20 +22,19 @@ use('QtAgg')
 image_dimensions = [800, 800]
 display_final_image = True        # Display the image on the screen?
 save_image = True                # Save a .png copy of your image?
-num_images = 1                    # How many images to produce?
+num_images = 30                   # How many images to produce?
 show_intermediate_plots = True  # Show intermediate results for troubleshooting?
 # Set a seed for reproducibility. If None, a seed is chosen randomly.
 seed = None
-cmap_name = 'any'              # Colormap: 'any', 'custom', or a matplotlib colormap name
+cmap_name = 'berlin'              # Colormap: 'any', 'custom', or a matplotlib colormap name
 output_directory = './outputs/'
 
 
 ##########################################
 for i in range(num_images):
     plt.close('all')  # Close all existing plots before starting a new image
-    # In VSCode, a short pause ensures plot windows close properly
-    plt.pause(0.1)
-    print(f'Currently making image {i + 1} of {num_images}')
+    plt.pause(0.1)      # In VSCode, a short pause ensures plot windows close properly
+    print(f'\nCurrently making image {i + 1} of {num_images}')
 
     # Create a PaintPour class object with your chosen parameters
     paint_pour = pptools.PaintPour(
@@ -46,6 +45,7 @@ for i in range(num_images):
         cmap_name=cmap_name,
         output_directory=output_directory,
         seed=seed,
+        num_continuous_levels=0,
     )
 
     # Generate the paint pour
