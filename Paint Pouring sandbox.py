@@ -9,10 +9,10 @@ use('QtAgg')
 
 # --- HOW TO USE THIS SANDBOX ---
 # 1. Adjust the parameters below to experiment with different paint pour styles.
-# 2. For each image, a new PaintPour object is created and .generate() is called.
-# 3. All results, including colormaps and noise maps, are accessible as attributes of the PaintPour object.
+# 2. The generate_paint_pour_images() function handles creating multiple images efficiently.
+# 3. All results, including colormaps and noise maps, are accessible as attributes of the PaintPour objects.
 # 4. Images are saved and/or displayed according to your settings.
-# 5. For advanced usage, pass additional arguments to PaintPour or modify the class in paint_pour_tools.py.
+# 5. For advanced usage, pass additional arguments or modify the class in paint_pour_tools.py.
 #
 # Example: To access the noise map for analysis, use: paint_pour.noise_map
 # Example: To change the colormap, set custom_cmap_colors or cmap_name.
@@ -30,22 +30,24 @@ output_directory = './outputs/'
 
 
 ##########################################
-for i in range(num_images):
-    plt.close('all')  # Close all existing plots before starting a new image
-    plt.pause(0.1)      # In VSCode, a short pause ensures plot windows close properly
-    print(f'\nCurrently making image {i + 1} of {num_images}')
+print(f'Generating {num_images} paint pour images...')
 
-    # Create a PaintPour class object with your chosen parameters
-    paint_pour = pptools.PaintPour(
-        image_dimensions=image_dimensions,
-        display_final_image=display_final_image,
-        save_image=save_image,
-        show_intermediate_plots=show_intermediate_plots,
-        cmap_name=cmap_name,
-        output_directory=output_directory,
-        seed=seed,
-    )
+# Generate all images using the convenience function
+results = pptools.generate_paint_pour_images(
+    num_images=num_images,
+    image_dimensions=image_dimensions,
+    display_final_image=display_final_image,
+    save_image=save_image,
+    show_intermediate_plots=show_intermediate_plots,
+    cmap_name=cmap_name,
+    output_directory=output_directory,
+    seed=seed,
+)
 
-    # Generate the paint pour
-    paint_pour_image = paint_pour.generate()
+print(f'Successfully generated {len(results)} images!')
+
+# If you need to access individual results:
+# for i, (image, paint_pour) in enumerate(results):
+#     print(f'Image {i+1}: {paint_pour.filename}')
+#     # You can access paint_pour.noise_map, paint_pour.final_colormap, etc.
     

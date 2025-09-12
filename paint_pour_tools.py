@@ -52,6 +52,9 @@ class PaintPour:
         if self.seed is not None:
             np.random.seed(self.seed)  # Set the seed for the random number generator
 
+        # Initialize all random variables in deterministic order
+        self._initialize_random_variables()
+        
         # Intelligently pick unspecified parameters
         self.assign_unspecified_parameters()
 
@@ -64,6 +67,10 @@ class PaintPour:
 
     def generate(self):
         start_time = time.time()  # Start a timer for performance-tracking purposes
+
+        # Reset the seed right before generating noise to ensure deterministic behavior
+        if self.seed is not None:
+            np.random.seed(self.seed)
 
         # Fractal noise and octave slices
         # Generate noise and octaves
@@ -205,17 +212,58 @@ class PaintPour:
         # The default of 256 levels was not enough
         self.final_colormap = self.final_colormap.resampled(10000)
 
-    def assign_unspecified_parameters(self):
-        '''Go through the paramters for this paint pour and randomly pick a value for each, but only assign that value
-        if it was not explicitly specified earlier. This allows the seed mechanism to work as intended.
-
+    def _initialize_random_variables(self):
+        """
+        Initialize all random variables in a deterministic order.
+        This ensures consistent behavior when using seeds, regardless of which parameters are specified.
+        
         IMPORTANT: All random calls must happen in the same order regardless of which parameters 
-        are specified, to ensure deterministic behavior with seeds.'''
-
+        are specified, to ensure deterministic behavior with seeds.
+        """
         # Generate a seed if not provided - this random call always happens
-        random_seed = np.random.randint(1, int(1e8))
+        self._random_seed = np.random.randint(1, int(1e8))
+        
+        # Random values for octave_powers
+        self._random_octave_powers = [1,
+                                     np.round(np.random.uniform(0.1, 0.5), 1),
+                                     np.round(np.random.uniform(0.0, 0.1), 2),
+                                     np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])]
+        
+        # Random value for stretch_value
+        self._random_stretch_value = np.random.randint(-2, 3)
+        
+        # Random value for rescaling_exponent
+        self._random_rescaling_exponent = 10 ** np.random.uniform(0.1, 2.6)
+        
+        # Random value for colormap - this call always happens to maintain sequence
+        self._random_colormap = pick_random_colormap(show_plot=False)
+        
+        # Random value for num_colormap_levels
+        self._random_num_colormap_levels = np.random.choice([30, 40, 50])
+        
+        # Random values for colormap generation that happens later
+        # We need to generate enough random values for the maximum possible colormap levels
+        max_levels = 50  # Based on the random choice above
+        
+        # Pre-generate colors for colormap (these are used in pick_paint_pour_colormap)
+        self._random_colormap_colors = np.random.randint(low=0, high=10000, size=max_levels)
+        
+        # Pre-generate nodes for colormap (these are used in pick_paint_pour_colormap)  
+        self._random_colormap_nodes = np.sort(np.random.uniform(low=0, high=1, size=max_levels - 2))
+        
+        # Random values for cell generation that happens later
+        self._random_include_perimeter = np.random.choice([True, False])
+        self._random_num_voronoi_points = np.random.choice([100, 250, 600])
+        self._random_cell_field_coefficient = np.random.choice([0.3, 1.0])
+        self._random_colormap_over_value = np.random.uniform(0, 1)
+
+    def assign_unspecified_parameters(self):
+        '''Go through the parameters for this paint pour and assign the pre-generated random values
+        only if they were not explicitly specified earlier. This allows the seed mechanism to work as intended.'''
+
+        # Use pre-generated seed if not provided
         if self.seed is None:
-            self.seed = random_seed
+            self.seed = self._random_seed
 
         # Apply prominent_cells overrides if needed
         if self.prominent_cells:
@@ -223,43 +271,22 @@ class PaintPour:
             self.add_cells = True
             self.num_colormap_levels = 'use base colormap'
 
-        # ALWAYS generate all random values in the same order, regardless of whether they're used
-        
-        # Random values for octave_powers
-        random_octave_powers = [1,
-                               np.round(np.random.uniform(0.1, 0.5), 1),
-                               np.round(np.random.uniform(0.0, 0.1), 2),
-                               np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])]
+        # Use pre-generated random values only if parameters weren't specified
         if self.octave_powers is None:
-            self.octave_powers = random_octave_powers
+            self.octave_powers = self._random_octave_powers
 
-        # Random value for stretch_value
-        random_stretch_value = np.random.randint(-2, 3)
         if self.stretch_value is None:
-            self.stretch_value = random_stretch_value
+            self.stretch_value = self._random_stretch_value
 
-        # Random value for rescaling_exponent
-        random_rescaling_exponent = 10 ** np.random.uniform(0.1, 2.6)
         if self.rescaling_exponent is None:
-            self.rescaling_exponent = random_rescaling_exponent
+            self.rescaling_exponent = self._random_rescaling_exponent
 
-        # Random value for colormap - this call always happens to maintain sequence
-        random_colormap = pick_random_colormap(show_plot=False)
         if self.cmap_name in ['any', None]:
-            self.base_colormap = random_colormap
+            self.base_colormap = self._random_colormap
             self.cmap_name = self.base_colormap.name
 
-        # Random value for num_colormap_levels
-        random_num_colormap_levels = np.random.choice([30, 40, 50])
         if self.num_colormap_levels is None:
-            self.num_colormap_levels = random_num_colormap_levels
-
-        # Pre-generate random values for colormap generation that happens later
-        # We need to do this here to ensure deterministic sequence
-        self._pre_generate_colormap_randoms()
-        
-        # Pre-generate random values for cell generation that happens later
-        self._pre_generate_cell_randoms()
+            self.num_colormap_levels = self._random_num_colormap_levels
 
         # temporary_random_variable = np.random.choice([0.9, 0.4, 0.6], p=[0.5, 0.3, 0.2])
         # temporary_random_variable = 1.0
@@ -269,30 +296,7 @@ class PaintPour:
         #     if self.num_colormap_levels == 'use base colormap':
         #         self.num_continuous_levels = 0
 
-    def _pre_generate_colormap_randoms(self):
-        """
-        Pre-generate all random values needed for colormap generation.
-        This ensures the random sequence is deterministic regardless of parameters.
-        """
-        # We need to generate enough random values for the maximum possible colormap levels
-        max_levels = 50  # Based on the random choice in assign_unspecified_parameters
-        
-        # Pre-generate colors for colormap (these are used in pick_paint_pour_colormap)
-        self._random_colormap_colors = np.random.randint(low=0, high=10000, size=max_levels)
-        
-        # Pre-generate nodes for colormap (these are used in pick_paint_pour_colormap)  
-        self._random_colormap_nodes = np.sort(np.random.uniform(low=0, high=1, size=max_levels - 2))
 
-    def _pre_generate_cell_randoms(self):
-        """
-        Pre-generate all random values needed for cell generation.
-        This ensures the random sequence is deterministic regardless of parameters.
-        """
-        # Random values used in cell generation (from generate() method)
-        self._random_include_perimeter = np.random.choice([True, False])
-        self._random_num_voronoi_points = np.random.choice([100, 250, 600])
-        self._random_cell_field_coefficient = np.random.choice([0.3, 1.0])
-        self._random_colormap_over_value = np.random.uniform(0, 1)
 
     def save_metadata_to_csv(self, filename):
         """
