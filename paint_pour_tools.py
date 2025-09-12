@@ -72,8 +72,8 @@ class PaintPour:
         if self.seed is not None:
             np.random.seed(self.seed)
 
-        # Fractal noise and octave slices
-        # Generate noise and octaves
+        # Generate fractal noise
+        print('...Generating fractal noise map')
         noise_map_tuple, vector_info = fractal_noise(
             image_dimensions=self.image_dimensions, 
             relative_powers=self.octave_powers, 
@@ -137,7 +137,7 @@ class PaintPour:
             print(f'***Image saved to: {self.output_directory}')
 
             if self.save_metadata is True:
-                print('Saving metadata to .csv file')
+                print('...Saving metadata to .csv file')
                 metadata_filename = self.filename[:-4] + '.csv'
                 self.save_metadata_to_csv(filename=metadata_filename)
 
@@ -161,7 +161,7 @@ class PaintPour:
         else:
             self.base_colormap = plt.cm.get_cmap(self.cmap_name)
         self.base_colormap = self.base_colormap.resampled(10000)
-        print(f'    Using base colormap: {self.base_colormap.name}')
+        print(f'...Making new colormap from the colors of your base colormap: {self.base_colormap.name}')
 
         # Plot the base colormap, if desired            
         if self.show_intermediate_plots:
@@ -171,32 +171,11 @@ class PaintPour:
         if self.num_colormap_levels != 'use base colormap':
             # Use pre-generated random values for deterministic behavior
             # Take only the number of colors we need from the pre-generated values
-            colors = self._random_colormap_colors[:self.num_colormap_levels] % self.base_colormap.N
-            nodes = self._random_colormap_nodes[:len(colors) - 2]
-            nodes = [0] + list(nodes) + [1] # The first and last nodes must be 0 and 1, respectively.
+            colors = self._random_colormap_colors[:self.num_colormap_levels]
+            nodes = np.sort(self._random_colormap_nodes[:len(colors) - 2])
+            nodes = [0] + list(nodes) + [1]  # The first and last nodes must be 0 and 1, respectively.
 
-            # NOTE: commenting out for now because I've determined that the images look better when ALL the 
-            # layers are made continuous by default.
-            # Make the necessary duplications to prepare this array of colors/nodes for use in a segmented colormap
-            # colors, nodes = convert_colors_and_nodes_for_segmented_cmap(colors, nodes)
-            # If num_continuous_levels is specified, delete that many color/node pairs 
-            # to result in that portion of the colormap becoming continuous
-            # if self.num_continuous_levels is not None and self.num_continuous_levels > 0:
-            #     # for i in range(self.num_continuous_levels):
-            #     # At the boundary between two colors, there are two nodes,
-            #     # one demarcating the end of one color and one demarcating the beginning of another.
-            #     # Determine the indices of the first of each of these pairs. This list of indices will be candidates
-            #     # for deletion, resulting in a continuous change from the first color to the second.
-            #     repeated_indices = [i for i in range(len(nodes) - 1) if nodes[i] == nodes[i + 1]]
-
-            #     # If we don't do this, we risk ending up with a colormap with far fewer color changes than the user intended 
-            #     # based on their specified num_colormap_levels parameter.
-            #     indices_to_remove = np.random.choice(repeated_indices, size=np.min([len(repeated_indices), self.num_continuous_levels]), 
-            #                                         replace=False)
-            #     colors = np.delete(colors, indices_to_remove)
-            #     nodes = np.delete(nodes, indices_to_remove)
-
-            print(f'    Final colormap will have {self.num_colormap_levels} main colors')
+            print(f'\t Final colormap will have {self.num_colormap_levels} distinct levels')
             self.final_colormap = make_custom_colormap(colors=self.base_colormap(colors), nodes=nodes,
                                         cmap_name=self.base_colormap.name, show_plot=False)
 
@@ -207,6 +186,7 @@ class PaintPour:
 
         else:
             self.final_colormap = self.base_colormap.copy()
+            print('\t Using the base colormap as the final colormap')
 
         # Resample the final colormap to ensure it has plenty of discrete levels. 
         # The default of 256 levels was not enough
@@ -235,27 +215,29 @@ class PaintPour:
         # Random value for rescaling_exponent
         self._random_rescaling_exponent = 10 ** np.random.uniform(0.1, 2.6)
         
+        ###########################################################################
+        ######## Random values for colormap generation that happens later #########
+        ###########################################################################
         # Random value for colormap - this call always happens to maintain sequence
         self._random_colormap = pick_random_colormap(show_plot=False)
         
         # Random value for num_colormap_levels
         self._random_num_colormap_levels = np.random.choice([30, 40, 50])
         
-        # Random values for colormap generation that happens later
-        # We need to generate enough random values for the maximum possible colormap levels
-        max_levels = 50  # Based on the random choice above
+        # Pre-generate a large number of colors for colormap (these are used in pick_paint_pour_colormap)
+        max_levels = 10000  # Generate enough random values for a huge number of colormap levels. More than the user could ever want.
+        self._random_colormap_colors = np.random.uniform(low=0, high=1, size=max_levels)
         
-        # Pre-generate colors for colormap (these are used in pick_paint_pour_colormap)
-        self._random_colormap_colors = np.random.randint(low=0, high=10000, size=max_levels)
-        
-        # Pre-generate nodes for colormap (these are used in pick_paint_pour_colormap)  
-        self._random_colormap_nodes = np.sort(np.random.uniform(low=0, high=1, size=max_levels - 2))
+        # Pre-generate nodes for colormap (these are used in pick_paint_pour_colormap)
+        # Don't worry about them not being sorted yet - that happens later.   
+        self._random_colormap_nodes = np.random.uniform(low=0, high=1, size=max_levels - 2)
+        ###########################################################################
         
         # Random values for cell generation that happens later
         self._random_include_perimeter = np.random.choice([True, False])
         self._random_num_voronoi_points = np.random.choice([100, 250, 600])
         self._random_cell_field_coefficient = np.random.choice([0.3, 1.0])
-        self._random_colormap_over_value = np.random.uniform(0, 1)
+        self._random_colormap_over_value = np.random.uniform(0, 1)  # Because the cell field gets added on top of the paint pour surface (which spans from 0-1), we need to set an "over" color for the cells.
 
     def assign_unspecified_parameters(self):
         '''Go through the parameters for this paint pour and assign the pre-generated random values
@@ -854,7 +836,7 @@ def pick_random_colormap(print_choice=False, show_plot=False):
     cmap : Colormap
         The randomly chosen matplotlib colormap.
     """
-    print('...Picking random colormap')
+    print('...Picking random base colormap')
     # Some colormaps are just bad looking for this kind of art. I list them here so they will be avoided during the random-picking process.
     bad_cmaps = ['flag', 'Accent', 'gist_stern', 'Paired', 'Dark2', 'Set1', 'Set2', 'Set3', 'tab10', 'tab20', 'tab20c', 'tab20b', 'binary', 'Pastel1', 'Pastel2', 'gist_yarg', 'gist_gray', 'brg', 'CMRmap', 'gist_ncar', 'gist_rainbow', 'hsv', 'terrain', 'gnuplot2', 'nipy_spectral', 'prism']
     non_reversed_colormaps = [x for x in plt.colormaps() if '_r' not in x]  # Generate a list of all colormaps that don't contain "_r" in their name, indicating they are just a reversed version of another colormap. "Grays" and "Grays_r" look fundamentally the same for this type of art.
@@ -870,6 +852,7 @@ def pick_random_colormap(print_choice=False, show_plot=False):
         print('...Chosen colormap: ', cmap.name)
     if show_plot == True:
         plot_colormap(cmap, title=f'Your randomly-chosen base colormap, {cmap.name}')
+    print(f'\t Chosen base colormap: {cmap.name}')
     return cmap
 
 
@@ -897,7 +880,7 @@ def make_custom_colormap(colors=None, nodes=None, cmap_name=None, show_plot=Fals
     cmap_custom : LinearSegmentedColormap
         The generated custom colormap.
     """
-    print('...Making a custom colormap')
+    print('\t Making a colormap from the provided colors and nodes')
 
     # Pick some values for colors and nodes if they are not specified
     if colors is None:
@@ -1240,6 +1223,10 @@ def generate_paint_pour_image(**kwargs):
         num_colormap_levels=50
     )
     """
+    # Close any open plots, since we're about to create a bunch of new ones
+    plt.close('all')
+    plt.pause(0.1)
+    
     paint_pour = PaintPour(**kwargs)
     image = paint_pour.generate()
     return image, paint_pour
@@ -1278,15 +1265,12 @@ def generate_paint_pour_images(num_images=1, **kwargs):
     base_seed = kwargs.get('seed', None)
     
     for i in range(num_images):
+        print(f'\n\nGenerating image {i + 1} of {num_images}')
         # If a seed was specified, use sequential seeds for each image
         if base_seed is not None:
             kwargs['seed'] = base_seed + i
         
         image, paint_pour = generate_paint_pour_image(**kwargs)
         results.append((image, paint_pour))
-        
-        # Close any open plots to prevent memory issues
-        plt.close('all')
-        plt.pause(0.1)
         
     return results
