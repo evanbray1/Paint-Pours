@@ -21,7 +21,7 @@ use('QtAgg')
 image_dimensions = [800, 800]
 display_final_image = False        # Display the image on the screen?
 save_image = True                # Save a .png copy of your image?
-num_images = 30                   # How many images to produce?
+num_images = 3                   # How many images to produce?
 show_intermediate_plots = False  # Show intermediate results for troubleshooting?
 # Set a seed for reproducibility. If None, a seed is chosen randomly.
 seed = None
@@ -44,10 +44,4 @@ results = pptools.generate_paint_pour_images(
     seed=seed,
 )
 
-print(f'Successfully generated {len(results)} images!')
-
-# If you need to access individual results:
-# for i, (image, paint_pour) in enumerate(results):
-#     print(f'Image {i+1}: {paint_pour.filename}')
-#     # You can access paint_pour.noise_map, paint_pour.final_colormap, etc.
-    
+print(f'Successfully generated {len(results)} images!') 
