@@ -2,6 +2,7 @@ import paint_pour_tools as pptools
 from matplotlib import use
 import matplotlib.pyplot as plt
 # Depending on which IDE you're using, you might need to change this line, or comment it out entirely.
+# Common options: 'QtAgg', 'TkAgg', 'Agg' (for headless)
 use('QtAgg')
 # Show the plots in the iPython console
 # %matplotlib inline
