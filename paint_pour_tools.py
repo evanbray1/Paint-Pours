@@ -52,6 +52,9 @@ class PaintPour:
         if self.seed is not None:
             np.random.seed(self.seed)  # Set the seed for the random number generator
 
+        # Initialize all random variables in deterministic order
+        self._initialize_random_variables()
+        
         # Intelligently pick unspecified parameters
         self.assign_unspecified_parameters()
 
@@ -64,6 +67,10 @@ class PaintPour:
 
     def generate(self):
         start_time = time.time()  # Start a timer for performance-tracking purposes
+
+        # Reset the seed right before generating noise to ensure deterministic behavior
+        if self.seed is not None:
+            np.random.seed(self.seed)
 
         # Fractal noise and octave slices
         # Generate noise and octaves
@@ -89,20 +96,21 @@ class PaintPour:
         if self.add_cells and not self.prominent_cells:
             warnings.warn('WARNING: the add_cells parameter isnt fully implemented yet. Try setting prominent_cells=True instead for now')
         if self.add_cells:
-            include_perimeter_regions = np.random.choice([True, False])
+            # Use pre-generated random values for deterministic behavior
+            include_perimeter_regions = self._random_include_perimeter
             self.gauss_smoothing_sigma = 6
             self.threshold_percentile = 70
-            num_voronoi_points = int(np.random.choice([100, 250, 600]) * self.image_dimensions[0] * self.image_dimensions[1] / (1920 * 1080))
+            num_voronoi_points = int(self._random_num_voronoi_points * self.image_dimensions[0] * self.image_dimensions[1] / (1920 * 1080))
             cell_field = make_cell_image(self.image_dimensions, num_voronoi_points=num_voronoi_points, show_plots=self.show_intermediate_plots, gauss_smoothing_sigma=self.gauss_smoothing_sigma,
                                          threshold_percentile=self.threshold_percentile, include_perimeter_regions=include_perimeter_regions)
             ind = np.where(cell_field == 1)
             if self.prominent_cells:
-                cell_field_coefficient = np.random.choice([0.3, 1.0])
+                cell_field_coefficient = self._random_cell_field_coefficient
                 self.paint_pour_surface += cell_field_coefficient * cell_field
                 self.paint_pour_surface = (self.paint_pour_surface - np.nanmin(self.paint_pour_surface)) / (np.nanmax(self.paint_pour_surface) - np.nanmin(self.paint_pour_surface))
             else:
                 self.paint_pour_surface[ind] = 1.01
-                self.final_colormap.set_over(self.base_colormap(np.random.uniform(0, 1)))
+                self.final_colormap.set_over(self.base_colormap(self._random_colormap_over_value))
 
         # Turn off interactive plotting if you don't want to see the final image displayed on-screen
         if not self.display_final_image:
@@ -161,9 +169,10 @@ class PaintPour:
 
         # Make a segmented colormap, UNLESS the user specified 'continuous' for num_colormap_levels
         if self.num_colormap_levels != 'use base colormap':
-            # Using the base colormap as a template, pick random colors and nodes
-            colors = np.random.randint(low=0, high=self.base_colormap.N, size=self.num_colormap_levels)
-            nodes = np.sort(np.random.uniform(low=0, high=1, size=len(colors) - 2))
+            # Use pre-generated random values for deterministic behavior
+            # Take only the number of colors we need from the pre-generated values
+            colors = self._random_colormap_colors[:self.num_colormap_levels] % self.base_colormap.N
+            nodes = self._random_colormap_nodes[:len(colors) - 2]
             nodes = [0] + list(nodes) + [1] # The first and last nodes must be 0 and 1, respectively.
 
             # NOTE: commenting out for now because I've determined that the images look better when ALL the 
@@ -203,45 +212,81 @@ class PaintPour:
         # The default of 256 levels was not enough
         self.final_colormap = self.final_colormap.resampled(10000)
 
+    def _initialize_random_variables(self):
+        """
+        Initialize all random variables in a deterministic order.
+        This ensures consistent behavior when using seeds, regardless of which parameters are specified.
+        
+        IMPORTANT: All random calls must happen in the same order regardless of which parameters 
+        are specified, to ensure deterministic behavior with seeds.
+        """
+        # Generate a seed if not provided - this random call always happens
+        self._random_seed = np.random.randint(1, int(1e8))
+        
+        # Random values for octave_powers
+        self._random_octave_powers = [1,
+                                     np.round(np.random.uniform(0.1, 0.5), 1),
+                                     np.round(np.random.uniform(0.0, 0.1), 2),
+                                     np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])]
+        
+        # Random value for stretch_value
+        self._random_stretch_value = np.random.randint(-2, 3)
+        
+        # Random value for rescaling_exponent
+        self._random_rescaling_exponent = 10 ** np.random.uniform(0.1, 2.6)
+        
+        # Random value for colormap - this call always happens to maintain sequence
+        self._random_colormap = pick_random_colormap(show_plot=False)
+        
+        # Random value for num_colormap_levels
+        self._random_num_colormap_levels = np.random.choice([30, 40, 50])
+        
+        # Random values for colormap generation that happens later
+        # We need to generate enough random values for the maximum possible colormap levels
+        max_levels = 50  # Based on the random choice above
+        
+        # Pre-generate colors for colormap (these are used in pick_paint_pour_colormap)
+        self._random_colormap_colors = np.random.randint(low=0, high=10000, size=max_levels)
+        
+        # Pre-generate nodes for colormap (these are used in pick_paint_pour_colormap)  
+        self._random_colormap_nodes = np.sort(np.random.uniform(low=0, high=1, size=max_levels - 2))
+        
+        # Random values for cell generation that happens later
+        self._random_include_perimeter = np.random.choice([True, False])
+        self._random_num_voronoi_points = np.random.choice([100, 250, 600])
+        self._random_cell_field_coefficient = np.random.choice([0.3, 1.0])
+        self._random_colormap_over_value = np.random.uniform(0, 1)
+
     def assign_unspecified_parameters(self):
-        '''Go through the paramters for this paint pour and randomly pick a value for each, but only assign that value
-        if it was not explicitly specified earlier. This allows the seed mechanism to work as intended.
+        '''Go through the parameters for this paint pour and assign the pre-generated random values
+        only if they were not explicitly specified earlier. This allows the seed mechanism to work as intended.'''
 
-        # TODO, the seed functionality currently isnt working. Fix it so the user can put in the seed of an existing image 
-        # and have all parameters be the same, EXCEPT for the ones they specify manually'''
-
-        temporary_random_variable = np.random.randint(1, int(1e8))
+        # Use pre-generated seed if not provided
         if self.seed is None:
-            self.seed = temporary_random_variable
+            self.seed = self._random_seed
 
+        # Apply prominent_cells overrides if needed
         if self.prominent_cells:
             self.rescaling_exponent = 1
             self.add_cells = True
             self.num_colormap_levels = 'use base colormap'
 
-        temporary_random_variable = [1,
-                                  np.round(np.random.uniform(0.1, 0.5), 1),
-                                  np.round(np.random.uniform(0.0, 0.1), 2),
-                                  np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])]
+        # Use pre-generated random values only if parameters weren't specified
         if self.octave_powers is None:
-            self.octave_powers = temporary_random_variable
+            self.octave_powers = self._random_octave_powers
 
-        temporary_random_variable = np.random.randint(-2, 3)
         if self.stretch_value is None:
-            self.stretch_value = temporary_random_variable
+            self.stretch_value = self._random_stretch_value
 
-        temporary_random_variable = 10 ** np.random.uniform(0.1, 2.6)
         if self.rescaling_exponent is None:
-            self.rescaling_exponent = temporary_random_variable
+            self.rescaling_exponent = self._random_rescaling_exponent
 
-        temporary_random_variable = pick_random_colormap(show_plot=False)
         if self.cmap_name in ['any', None]:
-            self.base_colormap = temporary_random_variable
+            self.base_colormap = self._random_colormap
             self.cmap_name = self.base_colormap.name
 
-        temporary_random_variable = np.random.choice([30, 40, 50])
         if self.num_colormap_levels is None:
-            self.num_colormap_levels = temporary_random_variable
+            self.num_colormap_levels = self._random_num_colormap_levels
 
         # temporary_random_variable = np.random.choice([0.9, 0.4, 0.6], p=[0.5, 0.3, 0.2])
         # temporary_random_variable = 1.0
@@ -250,6 +295,8 @@ class PaintPour:
         #     self.num_continuous_levels = int(self.num_colormap_levels * continuous_frac)
         #     if self.num_colormap_levels == 'use base colormap':
         #         self.num_continuous_levels = 0
+
+
 
     def save_metadata_to_csv(self, filename):
         """
@@ -1151,3 +1198,95 @@ def remove_cells_outside_circular_region(thresholded_cell_image, center, radius)
         if distance_from_circle_center < radius:
             new_thresholded_cell_image += temp_thresholded_cell_image
     return new_thresholded_cell_image
+
+
+# Convenience functions for easy use
+
+def generate_paint_pour_image(**kwargs):
+    """
+    Generate a single paint pour image with the given parameters.
+    
+    This is a convenience function that creates a PaintPour object and generates the image.
+    For more control, use the PaintPour class directly.
+    
+    Parameters
+    ----------
+    **kwargs : keyword arguments
+        Any arguments accepted by the PaintPour class constructor.
+        
+    Returns
+    -------
+    paint_pour_surface : np.ndarray
+        The generated paint pour image.
+    paint_pour_object : PaintPour
+        The PaintPour object used to generate the image (for accessing metadata).
+        
+    Examples
+    --------
+    # Generate a basic image
+    image, paint_pour = generate_paint_pour_image(image_dimensions=[800, 600])
+    
+    # Generate with specific seed for reproducibility
+    image, paint_pour = generate_paint_pour_image(
+        image_dimensions=[1920, 1080], 
+        seed=12345,
+        prominent_cells=True
+    )
+    
+    # Generate with custom colormap
+    image, paint_pour = generate_paint_pour_image(
+        image_dimensions=[800, 600],
+        cmap_name='viridis',
+        num_colormap_levels=50
+    )
+    """
+    paint_pour = PaintPour(**kwargs)
+    image = paint_pour.generate()
+    return image, paint_pour
+
+
+def generate_paint_pour_images(num_images=1, **kwargs):
+    """
+    Generate multiple paint pour images with the given parameters.
+    
+    Parameters
+    ----------
+    num_images : int, optional
+        Number of images to generate (default is 1).
+    **kwargs : keyword arguments
+        Any arguments accepted by the PaintPour class constructor.
+        Note: If 'seed' is specified, each image will use seed, seed+1, seed+2, etc.
+        
+    Returns
+    -------
+    results : list of tuples
+        List of (image, paint_pour_object) tuples for each generated image.
+        
+    Examples
+    --------
+    # Generate 5 random images
+    results = generate_paint_pour_images(num_images=5, image_dimensions=[800, 600])
+    
+    # Generate 3 images with sequential seeds
+    results = generate_paint_pour_images(
+        num_images=3, 
+        image_dimensions=[1920, 1080],
+        seed=1000
+    )
+    """
+    results = []
+    base_seed = kwargs.get('seed', None)
+    
+    for i in range(num_images):
+        # If a seed was specified, use sequential seeds for each image
+        if base_seed is not None:
+            kwargs['seed'] = base_seed + i
+        
+        image, paint_pour = generate_paint_pour_image(**kwargs)
+        results.append((image, paint_pour))
+        
+        # Close any open plots to prevent memory issues
+        plt.close('all')
+        plt.pause(0.1)
+        
+    return results

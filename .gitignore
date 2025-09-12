@@ -1,3 +1,6 @@
 output_data
 testing
 outputs
+__pycache__/
+*.pyc
+test_*.py
