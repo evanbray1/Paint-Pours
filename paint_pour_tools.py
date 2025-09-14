@@ -29,6 +29,7 @@ class PaintPour:
                  num_colormap_levels=None,
                 #  num_continuous_levels=None,
                  prominent_cells=False,
+                 save_in_cmap_subdirectory=False,
                  **kwargs):
         '''A class for generating paint pour images.'''
 
@@ -49,6 +50,7 @@ class PaintPour:
         # self.num_continuous_levels = num_continuous_levels
         self.prominent_cells = prominent_cells
         self.save_metadata = save_metadata
+        self.save_in_cmap_subdirectory = save_in_cmap_subdirectory
         self.kwargs = kwargs
 
         if self.seed is not None:
@@ -59,6 +61,12 @@ class PaintPour:
 
         # Intelligently pick unspecified parameters
         self.assign_unspecified_parameters()
+
+        # Tweak output_directory if save_in_cmap_subdirectory is True
+        if self.save_in_cmap_subdirectory:
+            cmap_name = self.base_cmap_name if hasattr(self, 'base_cmap_name') else 'custom'
+            base_dir = self.output_directory if self.output_directory is not None else './output_data/'
+            self.output_directory = os.path.join(base_dir, str(cmap_name))
 
         # initialize some output attributes
         self.base_colormap = None
@@ -202,10 +210,11 @@ class PaintPour:
         self._random_seed = np.random.randint(1, int(1e8))
 
         # Random values for octave_powers
-        self._random_octave_powers = [1,
+        self._random_octave_powers = np.array([1,
                                      np.round(np.random.uniform(0.1, 0.5), 1),
                                      np.round(np.random.uniform(0.0, 0.1), 2),
-                                     np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])]
+                                     np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])])
+    
 
         # Random value for stretch_value
         self._random_stretch_value = np.random.randint(-2, 3)
@@ -214,7 +223,7 @@ class PaintPour:
         self._random_rescaling_exponent = 10 ** np.random.uniform(0.1, 2.6)
 
         ###########################################################################
-        ######## Random values for colormap generation that happens later #########
+        # Random values for colormap generation that happens later ################
         ###########################################################################
         # Random value for colormap - this call always happens to maintain sequence
         self._random_colormap = pick_random_colormap(show_plot=False)
@@ -267,14 +276,6 @@ class PaintPour:
 
         if self.num_colormap_levels is None:
             self.num_colormap_levels = self._random_num_colormap_levels
-
-        # temporary_random_variable = np.random.choice([0.9, 0.4, 0.6], p=[0.5, 0.3, 0.2])
-        # temporary_random_variable = 1.0
-        # if self.num_continuous_levels is None:
-        #     continuous_frac = temporary_random_variable
-        #     self.num_continuous_levels = int(self.num_colormap_levels * continuous_frac)
-        #     if self.num_colormap_levels == 'use base colormap':
-        #         self.num_continuous_levels = 0
 
     def save_metadata_to_csv(self, filename):
         """
@@ -347,8 +348,8 @@ def power_rescaler(y, exponent):
 
 # Define a function for interpolating between two points, which we do a lot here. This is a convenient function because it doesn't have "kinks" at the endpoints like a linear interpolation function would.
 # https://en.wikipedia.org/wiki/Smoothstep
-
-@njit(parallel=True,fastmath=True)   #Like magic, the @njit bit makes the below function run faster by converting it into machine code.
+# Like magic, the @njit bit makes the below function run faster by converting it into machine code.
+@njit(parallel=True, fastmath=True)  
 def smootherstep_function(x):
     """
     Compute the smootherstep interpolation for input x.
@@ -371,8 +372,6 @@ def smootherstep_function(x):
 
 
 def perlin_field(image_dimensions, octave, stretch, make_tileable=False, show_plots=False):
-    # TEMP_TIMING
-    t_start_total = time.time()
     """
     Generate a Perlin noise field for a given image size and octave.
 
