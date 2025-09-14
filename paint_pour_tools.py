@@ -214,7 +214,7 @@ class PaintPour:
         self._random_rescaling_exponent = 10 ** np.random.uniform(0.1, 2.6)
 
         ###########################################################################
-        ######## Random values for colormap generation that happens later #########
+        # Random values for colormap generation that happens later ################
         ###########################################################################
         # Random value for colormap - this call always happens to maintain sequence
         self._random_colormap = pick_random_colormap(show_plot=False)
@@ -347,8 +347,8 @@ def power_rescaler(y, exponent):
 
 # Define a function for interpolating between two points, which we do a lot here. This is a convenient function because it doesn't have "kinks" at the endpoints like a linear interpolation function would.
 # https://en.wikipedia.org/wiki/Smoothstep
-
-@njit(parallel=True,fastmath=True)   #Like magic, the @njit bit makes the below function run faster by converting it into machine code.
+# Like magic, the @njit bit makes the below function run faster by converting it into machine code.
+@njit(parallel=True, fastmath=True)  
 def smootherstep_function(x):
     """
     Compute the smootherstep interpolation for input x.
@@ -371,8 +371,6 @@ def smootherstep_function(x):
 
 
 def perlin_field(image_dimensions, octave, stretch, make_tileable=False, show_plots=False):
-    # TEMP_TIMING
-    t_start_total = time.time()
     """
     Generate a Perlin noise field for a given image size and octave.
 
