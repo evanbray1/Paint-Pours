@@ -18,13 +18,13 @@ use('QtAgg')
 # Example: To change the colormap, set custom_cmap_colors or cmap_name.
 
 # ######## USER-DEFINED VARIABLES #########
-image_dimensions = [800, 800]
+image_dimensions = [2560, 1440]
 display_final_image = True        # Display the image on the screen?
 save_image = True                # Save a .png copy of your image?
-num_images = 3                   # How many images to produce?
-show_intermediate_plots = True  # Show intermediate results for troubleshooting?
+num_images = 1                   # How many images to produce?
+show_intermediate_plots = False  # Show intermediate results for troubleshooting?
 # Set a seed for reproducibility. If None, a seed is chosen randomly.
-seed = 165435
+seed = 1
 cmap_name = 'any'              # Colormap: 'any', 'custom', or a matplotlib colormap name
 output_directory = './outputs/'
 

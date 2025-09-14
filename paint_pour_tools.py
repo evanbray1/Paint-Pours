@@ -8,6 +8,8 @@ import os
 import time
 import warnings
 import csv
+from numba import njit
+
 
 class PaintPour:
     def __init__(self,
@@ -17,7 +19,7 @@ class PaintPour:
                  save_metadata=True,
                  show_intermediate_plots=False,
                  add_cells=False,
-                 cmap_name='any',
+                 base_cmap_name='any',
                  custom_cmap_colors=None,
                  output_directory=None,
                  seed=None,
@@ -36,7 +38,7 @@ class PaintPour:
         self.save_image = save_image
         self.show_intermediate_plots = show_intermediate_plots
         self.add_cells = add_cells
-        self.cmap_name = cmap_name
+        self.base_cmap_name = base_cmap_name
         self.custom_cmap_colors = custom_cmap_colors
         self.output_directory = output_directory
         self.seed = seed
@@ -54,7 +56,7 @@ class PaintPour:
 
         # Initialize all random variables in deterministic order
         self._initialize_random_variables()
-        
+
         # Intelligently pick unspecified parameters
         self.assign_unspecified_parameters()
 
@@ -66,8 +68,6 @@ class PaintPour:
         self.paint_pour_surface = None
 
     def generate(self):
-        start_time = time.time()  # Start a timer for performance-tracking purposes
-
         # Reset the seed right before generating noise to ensure deterministic behavior
         if self.seed is not None:
             np.random.seed(self.seed)
@@ -105,8 +105,8 @@ class PaintPour:
                                          threshold_percentile=self.threshold_percentile, include_perimeter_regions=include_perimeter_regions)
             ind = np.where(cell_field == 1)
             if self.prominent_cells:
-                cell_field_coefficient = self._random_cell_field_coefficient
-                self.paint_pour_surface += cell_field_coefficient * cell_field
+                cell_field_prominence = self._random_cell_field_prominence
+                self.paint_pour_surface += cell_field_prominence * cell_field
                 self.paint_pour_surface = (self.paint_pour_surface - np.nanmin(self.paint_pour_surface)) / (np.nanmax(self.paint_pour_surface) - np.nanmin(self.paint_pour_surface))
             else:
                 self.paint_pour_surface[ind] = 1.01
@@ -145,21 +145,19 @@ class PaintPour:
         if not self.display_final_image:
             plt.ion()
 
-        elapsed_time = round(time.time() - start_time, 2)
-        print('Elapsed Time: ' + str(elapsed_time) + ' seconds')
         return self.paint_pour_surface
 
     def pick_paint_pour_colormap(self):
         '''Given the parameters of this PaintPour, pick a colormap to use'''
 
         # Pick a base colormap from which the segmented colormap will be produced
-        if self.cmap_name == 'custom':
+        if self.base_cmap_name == 'custom':
             if self.custom_cmap_colors is None:
                 self.custom_cmap_colors = ['#33192F', '#803D75', '#CF2808', '#FEE16E', '#6AA886', '#5CE5FB', '#1A1941']
             colors = self.custom_cmap_colors.copy()
             self.base_colormap = make_custom_colormap(colors=colors, show_plot=False)
         else:
-            self.base_colormap = plt.cm.get_cmap(self.cmap_name)
+            self.base_colormap = plt.cm.get_cmap(self.base_cmap_name)
         self.base_colormap = self.base_colormap.resampled(10000)
         print(f'...Making new colormap from the colors of your base colormap: {self.base_colormap.name}')
 
@@ -196,47 +194,47 @@ class PaintPour:
         """
         Initialize all random variables in a deterministic order.
         This ensures consistent behavior when using seeds, regardless of which parameters are specified.
-        
+
         IMPORTANT: All random calls must happen in the same order regardless of which parameters 
         are specified, to ensure deterministic behavior with seeds.
         """
         # Generate a seed if not provided - this random call always happens
         self._random_seed = np.random.randint(1, int(1e8))
-        
+
         # Random values for octave_powers
         self._random_octave_powers = [1,
                                      np.round(np.random.uniform(0.1, 0.5), 1),
                                      np.round(np.random.uniform(0.0, 0.1), 2),
                                      np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])]
-        
+
         # Random value for stretch_value
         self._random_stretch_value = np.random.randint(-2, 3)
-        
+
         # Random value for rescaling_exponent
         self._random_rescaling_exponent = 10 ** np.random.uniform(0.1, 2.6)
-        
+
         ###########################################################################
         ######## Random values for colormap generation that happens later #########
         ###########################################################################
         # Random value for colormap - this call always happens to maintain sequence
         self._random_colormap = pick_random_colormap(show_plot=False)
-        
+
         # Random value for num_colormap_levels
         self._random_num_colormap_levels = np.random.choice([30, 40, 50])
-        
+
         # Pre-generate a large number of colors for colormap (these are used in pick_paint_pour_colormap)
         max_levels = 10000  # Generate enough random values for a huge number of colormap levels. More than the user could ever want.
         self._random_colormap_colors = np.random.uniform(low=0, high=1, size=max_levels)
-        
+
         # Pre-generate nodes for colormap (these are used in pick_paint_pour_colormap)
         # Don't worry about them not being sorted yet - that happens later.   
         self._random_colormap_nodes = np.random.uniform(low=0, high=1, size=max_levels - 2)
         ###########################################################################
-        
+
         # Random values for cell generation that happens later
         self._random_include_perimeter = np.random.choice([True, False])
         self._random_num_voronoi_points = np.random.choice([100, 250, 600])
-        self._random_cell_field_coefficient = np.random.choice([0.3, 1.0])
+        self._random_cell_field_prominence = np.random.choice([0.3, 1.0])
         self._random_colormap_over_value = np.random.uniform(0, 1)  # Because the cell field gets added on top of the paint pour surface (which spans from 0-1), we need to set an "over" color for the cells.
 
     def assign_unspecified_parameters(self):
@@ -263,9 +261,9 @@ class PaintPour:
         if self.rescaling_exponent is None:
             self.rescaling_exponent = self._random_rescaling_exponent
 
-        if self.cmap_name in ['any', None]:
+        if self.base_cmap_name in ['any', None]:
             self.base_colormap = self._random_colormap
-            self.cmap_name = self.base_colormap.name
+            self.base_cmap_name = self.base_colormap.name
 
         if self.num_colormap_levels is None:
             self.num_colormap_levels = self._random_num_colormap_levels
@@ -277,8 +275,6 @@ class PaintPour:
         #     self.num_continuous_levels = int(self.num_colormap_levels * continuous_frac)
         #     if self.num_colormap_levels == 'use base colormap':
         #         self.num_continuous_levels = 0
-
-
 
     def save_metadata_to_csv(self, filename):
         """
@@ -351,9 +347,8 @@ def power_rescaler(y, exponent):
 
 # Define a function for interpolating between two points, which we do a lot here. This is a convenient function because it doesn't have "kinks" at the endpoints like a linear interpolation function would.
 # https://en.wikipedia.org/wiki/Smoothstep
-# @njit(parallel=True,fastmath=True)   #Like magic, the @njit bit makes the below function run faster by converting it into machine code.
 
-
+@njit(parallel=True,fastmath=True)   #Like magic, the @njit bit makes the below function run faster by converting it into machine code.
 def smootherstep_function(x):
     """
     Compute the smootherstep interpolation for input x.
@@ -376,6 +371,8 @@ def smootherstep_function(x):
 
 
 def perlin_field(image_dimensions, octave, stretch, make_tileable=False, show_plots=False):
+    # TEMP_TIMING
+    t_start_total = time.time()
     """
     Generate a Perlin noise field for a given image size and octave.
 
@@ -386,7 +383,7 @@ def perlin_field(image_dimensions, octave, stretch, make_tileable=False, show_pl
     octave : int
         The octave number (controls grid density).
     stretch : int
-        Stretch factor for grid shape (positive: more columns, negative: more rows).
+        Stretch factor for grid shape (positive: more rows, negative: more columns).
     make_tileable : bool, optional
         If True, makes the noise field tileable (default is False).
     show_plots : bool, optional
@@ -399,7 +396,6 @@ def perlin_field(image_dimensions, octave, stretch, make_tileable=False, show_pl
     vector_info : list
         List containing vector grid coordinates and directions used for noise generation.
     """
-
     # Break the image field up into a grid of NxM (width x height) vertices. Where N,M are defined by the current "octave" and "stretch" parameters. The squares between these vertices shall be referred to as "cells". 
     # The stretch parameter will add more cells in the x or y direction, depending on whether it is positive or negative and it cause the appearnce to be "stretched" like it was rendered for a different resolution and then stretched to fit the desired one.
     # Stretch must be an integer and adds either columns (positive) or rows (negative).
@@ -413,7 +409,6 @@ def perlin_field(image_dimensions, octave, stretch, make_tileable=False, show_pl
     else:
         grid_dimensions = [2**(octave), 2**(octave)]
 
-    # print('Dimensions of vector grid: ',grid_dimensions)
     # Build some arrays that store information about the gradient vectors at each grid node (or "vertices")
     if octave == 0:  # If we're doing the 0th octave, the vectors get positioned OUTSIDE the corners of the image. Since the 1st octave still produces too hilly of a surface unto itself.
         vector_coords_x = np.linspace(-0.5 * image_dimensions[0], 1.5 * image_dimensions[0], grid_dimensions[0], dtype=np.float32)  # X coordinates of vertices (Note the units here are not in pixels, but in "# of vertices from the left". I call this the "cell coordinate system").
@@ -468,18 +463,16 @@ def perlin_field(image_dimensions, octave, stretch, make_tileable=False, show_pl
         for j in range(num_cells_x):
             # Locate the grid points whose x,y coordinates place it in the current cell. These are referred to as the "offset vectors" on Wikipedia. As in "offset from the node of interest". A "node" is "one of the cell corners".
             # So if our node of interest is the bottom left corner of a cell, the "offset vector" for a point in the top right corner of the cell will be [~1,~1]
+
             cell_coords_x = grid_points_x[np.where((grid_points_x >= j) & (grid_points_x < (j + 1)))] - j  # This is an array of grid points with coordinates that fall in cell (i,j). Think of these coordinate points as "position within the current cell". These coordinate values range from [0,1)
             cell_coords_y = grid_points_y[np.where((grid_points_y >= i) & (grid_points_y < (i + 1)))] - i
-
             a, b = np.meshgrid(cell_coords_x, cell_coords_y)  # turn those cell coordinates into a meshgrid of points.
-            coordinates = np.array([a.ravel(), b.ravel()])  # Reshape those big 'ol 2D arrays into something that's easier for humans to work with.
+            coordinates = np.array([a.ravel(), b.ravel()])  # Reshape those big 2D arrays into something that's easier for humans to work with.
 
             # Count some things
             num_points_in_cell = len(coordinates[0])  # number of unique points there are in this cell total
             num_points_in_cell_x = len(cell_coords_x)  # Number of unique x-coordinates there are for this cell
             num_points_in_cell_y = len(cell_coords_y)  # Number of unique y-coordinates there are for this cell
-
-            # Calculate the x,y position of this cell within the overall image, because we're going to fill in the "image" variable one chunk at a time.
             x_low = len(np.where(grid_points_x < j)[0])
             x_high = x_low + num_points_in_cell_x
             y_low = len(np.where(grid_points_y < i)[0])
@@ -586,8 +579,8 @@ def fractal_noise(image_dimensions, relative_powers, stretch, show_perlin_noise_
     vectors = None
     octave_images = []
     for i in range(num_octaves):
-        print(f'\t Making octave {i} of {num_octaves}')
         if relative_powers[i] > 0:
+            print(f'\t Making octave {i}')
             perlin_image, vectors = perlin_field(image_dimensions, i, stretch, show_plots=show_perlin_noise_plots)
             octave_to_add = relative_powers[i] * perlin_image
             image += octave_to_add
@@ -1188,54 +1181,60 @@ def remove_cells_outside_circular_region(thresholded_cell_image, center, radius)
 def generate_paint_pour_image(**kwargs):
     """
     Generate a single paint pour image with the given parameters.
-    
+
     This is a convenience function that creates a PaintPour object and generates the image.
     For more control, use the PaintPour class directly.
-    
+
     Parameters
     ----------
     **kwargs : keyword arguments
         Any arguments accepted by the PaintPour class constructor.
-        
+
     Returns
     -------
     paint_pour_surface : np.ndarray
         The generated paint pour image.
     paint_pour_object : PaintPour
         The PaintPour object used to generate the image (for accessing metadata).
-        
+
     Examples
     --------
     # Generate a basic image
     image, paint_pour = generate_paint_pour_image(image_dimensions=[800, 600])
-    
+
     # Generate with specific seed for reproducibility
     image, paint_pour = generate_paint_pour_image(
         image_dimensions=[1920, 1080], 
         seed=12345,
         prominent_cells=True
     )
-    
+
     # Generate with custom colormap
     image, paint_pour = generate_paint_pour_image(
         image_dimensions=[800, 600],
-        cmap_name='viridis',
+        base_cmap_name='viridis',
         num_colormap_levels=50
     )
     """
     # Close any open plots, since we're about to create a bunch of new ones
     plt.close('all')
     plt.pause(0.1)
-    
+
+    # Start a timer for tracking elapsed time
+    start_time = time.time()
+
     paint_pour = PaintPour(**kwargs)
     image = paint_pour.generate()
+
+    elapsed_time = time.time() - start_time
+    print(f'\n\nTotal elapsed time: {elapsed_time:.1f} seconds')
     return image, paint_pour
 
 
 def generate_paint_pour_images(num_images=1, **kwargs):
     """
     Generate multiple paint pour images with the given parameters.
-    
+
     Parameters
     ----------
     num_images : int, optional
@@ -1243,17 +1242,17 @@ def generate_paint_pour_images(num_images=1, **kwargs):
     **kwargs : keyword arguments
         Any arguments accepted by the PaintPour class constructor.
         Note: If 'seed' is specified, each image will use seed, seed+1, seed+2, etc.
-        
+
     Returns
     -------
     results : list of tuples
         List of (image, paint_pour_object) tuples for each generated image.
-        
+
     Examples
     --------
     # Generate 5 random images
     results = generate_paint_pour_images(num_images=5, image_dimensions=[800, 600])
-    
+
     # Generate 3 images with sequential seeds
     results = generate_paint_pour_images(
         num_images=3, 
@@ -1263,14 +1262,14 @@ def generate_paint_pour_images(num_images=1, **kwargs):
     """
     results = []
     base_seed = kwargs.get('seed', None)
-    
+
     for i in range(num_images):
         print(f'\n\nGenerating image {i + 1} of {num_images}')
         # If a seed was specified, use sequential seeds for each image
         if base_seed is not None:
             kwargs['seed'] = base_seed + i
-        
+
         image, paint_pour = generate_paint_pour_image(**kwargs)
         results.append((image, paint_pour))
-        
+
     return results
