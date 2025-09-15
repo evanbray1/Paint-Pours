@@ -27,7 +27,6 @@ class PaintPour:
                  stretch_value=None,
                  rescaling_exponent=None,
                  num_colormap_levels=None,
-                #  num_continuous_levels=None,
                  prominent_cells=False,
                  save_in_cmap_subdirectory=False,
                  **kwargs):
@@ -47,7 +46,6 @@ class PaintPour:
         self.stretch_value = stretch_value
         self.rescaling_exponent = rescaling_exponent
         self.num_colormap_levels = num_colormap_levels
-        # self.num_continuous_levels = num_continuous_levels
         self.prominent_cells = prominent_cells
         self.save_metadata = save_metadata
         self.save_in_cmap_subdirectory = save_in_cmap_subdirectory
@@ -133,7 +131,7 @@ class PaintPour:
 
         # Create a base filename
         if self.save_image:
-            self.filename = f"{self.base_colormap.name}_{self.num_colormap_levels}levels_" + "_".join([f"{i:.2f}" for i in self.octave_powers[1:]]) + f"_exponent{self.rescaling_exponent:.0f}"
+            self.filename = f"{self.base_colormap.name}_{self.num_colormap_levels}levels_" + "_".join([f"{i:.2f}" for i in self.octave_powers[1:]]) + f"_exponent{self.rescaling_exponent:.0f}_stretch{self.stretch_value:.0f}"
             if self.add_cells:
                 self.filename += '_cellfield_voronoi'
             self.filename += '_seed' + str(self.seed) + '.png'
@@ -211,10 +209,9 @@ class PaintPour:
 
         # Random values for octave_powers
         self._random_octave_powers = np.array([1,
-                                     np.round(np.random.uniform(0.1, 0.5), 1),
-                                     np.round(np.random.uniform(0.0, 0.1), 2),
-                                     np.random.choice([0.0, 0.01, 0.02, 0.08], p=[0.55, 0.15, 0.15, 0.15])])
-    
+            np.round(np.random.uniform(0.1, 0.9), 1),
+            np.round(np.random.uniform(0.0, 0.2), 2),
+            np.random.choice([0.01, 0.04, 0.08])])
 
         # Random value for stretch_value
         self._random_stretch_value = np.random.randint(-2, 3)
@@ -229,7 +226,7 @@ class PaintPour:
         self._random_colormap = pick_random_colormap(show_plot=False)
 
         # Random value for num_colormap_levels
-        self._random_num_colormap_levels = np.random.choice([30, 40, 50])
+        self._random_num_colormap_levels = np.random.choice([30, 40, 50, 60])
 
         # Pre-generate a large number of colors for colormap (these are used in pick_paint_pour_colormap)
         max_levels = 10000  # Generate enough random values for a huge number of colormap levels. More than the user could ever want.
@@ -828,9 +825,10 @@ def pick_random_colormap(print_choice=False, show_plot=False):
     cmap : Colormap
         The randomly chosen matplotlib colormap.
     """
-    print('...Picking random base colormap')
-    # Some colormaps are just bad looking for this kind of art. I list them here so they will be avoided during the random-picking process.
-    bad_cmaps = ['flag', 'Accent', 'gist_stern', 'Paired', 'Dark2', 'Set1', 'Set2', 'Set3', 'tab10', 'tab20', 'tab20c', 'tab20b', 'binary', 'Pastel1', 'Pastel2', 'gist_yarg', 'gist_gray', 'brg', 'CMRmap', 'gist_ncar', 'gist_rainbow', 'hsv', 'terrain', 'gnuplot2', 'nipy_spectral', 'prism']
+    # Some colormaps are just bad looking for this kind of art. 
+    # Or redundant, like the 6 different renditions of 'gray'.
+    # I list them here so they will be avoided during the random-picking process.
+    bad_cmaps = ['flag', 'Accent', 'gist_stern', 'gist_grey', 'gist_yerg', 'grey', 'Greys', 'twilight_shifted', 'Paired', 'Dark2', 'Set1', 'Set2', 'Set3', 'tab10', 'tab20', 'tab20c', 'tab20b', 'binary', 'Pastel1', 'Pastel2', 'gist_yarg', 'gist_gray', 'brg', 'CMRmap', 'gist_ncar', 'gist_rainbow', 'hsv', 'terrain', 'gnuplot2', 'nipy_spectral', 'prism']
     non_reversed_colormaps = [x for x in plt.colormaps() if '_r' not in x]  # Generate a list of all colormaps that don't contain "_r" in their name, indicating they are just a reversed version of another colormap. "Grays" and "Grays_r" look fundamentally the same for this type of art.
 
     # Pick a random colormap
@@ -841,10 +839,9 @@ def pick_random_colormap(print_choice=False, show_plot=False):
         # print('Randomly chose an ugly colormap! Choosing again...')
         cmap = plt.cm.get_cmap(np.random.choice(non_reversed_colormaps))
     if print_choice == True:
-        print('...Chosen colormap: ', cmap.name)
+        print(f'\t Chosen base colormap: {cmap.name}')
     if show_plot == True:
         plot_colormap(cmap, title=f'Your randomly-chosen base colormap, {cmap.name}')
-    print(f'\t Chosen base colormap: {cmap.name}')
     return cmap
 
 
