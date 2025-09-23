@@ -29,6 +29,7 @@ class PaintPour:
                  num_colormap_levels=None,
                  prominent_cells=False,
                  save_in_cmap_subdirectory=False,
+                 use_segmented_colormap=False,
                  **kwargs):
         '''A class for generating paint pour images.'''
 
@@ -49,6 +50,7 @@ class PaintPour:
         self.prominent_cells = prominent_cells
         self.save_metadata = save_metadata
         self.save_in_cmap_subdirectory = save_in_cmap_subdirectory
+        self.use_segmented_colormap = use_segmented_colormap
         self.kwargs = kwargs
 
         if self.seed is not None:
@@ -160,8 +162,11 @@ class PaintPour:
         if self.base_cmap_name == 'custom':
             if self.custom_cmap_colors is None:
                 self.custom_cmap_colors = ['#33192F', '#803D75', '#CF2808', '#FEE16E', '#6AA886', '#5CE5FB', '#1A1941']
-            colors = self.custom_cmap_colors.copy()
-            self.base_colormap = make_custom_colormap(colors=colors, show_plot=False)
+
+            # Generate a segmented colormap with len(custom_cmap_colors) discrete colors
+            colors_temp = np.repeat(self.custom_cmap_colors, 2)
+            nodes_temp = np.repeat(np.linspace(0, 1, len(self.custom_cmap_colors) + 1), 2)[1:-1]
+            self.base_colormap = make_custom_colormap(colors=colors_temp, nodes=nodes_temp, show_plot=False)
         else:
             self.base_colormap = plt.cm.get_cmap(self.base_cmap_name)
         self.base_colormap = self.base_colormap.resampled(10000)
@@ -217,7 +222,7 @@ class PaintPour:
         self._random_stretch_value = np.random.randint(-2, 3)
 
         # Random value for rescaling_exponent
-        self._random_rescaling_exponent = 10 ** np.random.uniform(0.1, 2.6)
+        self._random_rescaling_exponent = 10 ** np.random.uniform(0.1, 2)
 
         ###########################################################################
         # Random values for colormap generation that happens later ################
@@ -226,7 +231,7 @@ class PaintPour:
         self._random_colormap = pick_random_colormap(show_plot=False)
 
         # Random value for num_colormap_levels
-        self._random_num_colormap_levels = np.random.choice([30, 40, 50, 60])
+        self._random_num_colormap_levels = np.random.choice([50, 60, 70])
 
         # Pre-generate a large number of colors for colormap (these are used in pick_paint_pour_colormap)
         max_levels = 10000  # Generate enough random values for a huge number of colormap levels. More than the user could ever want.
@@ -235,6 +240,9 @@ class PaintPour:
         # Pre-generate nodes for colormap (these are used in pick_paint_pour_colormap)
         # Don't worry about them not being sorted yet - that happens later.   
         self._random_colormap_nodes = np.random.uniform(low=0, high=1, size=max_levels - 2)
+
+        if self.use_segmented_colormap:
+            self._random_colormap_colors, self._random_colormap_nodes = convert_colors_and_nodes_for_segmented_cmap(self._random_colormap_colors, self._random_colormap_nodes)
         ###########################################################################
 
         # Random values for cell generation that happens later
@@ -869,6 +877,13 @@ def make_custom_colormap(colors=None, nodes=None, cmap_name=None, show_plot=Fals
     cmap_custom : LinearSegmentedColormap
         The generated custom colormap.
     """
+    # Check to make sure the first and last values in the "nodes" array are 0 and 1, respectively.
+    if nodes is not None:
+        if nodes[0] != 0 or nodes[-1] != 1:
+            raise ValueError('The first and last values in the "nodes" array must be 0 and 1, respectively.')
+        if len(nodes) != len(colors):
+            raise ValueError('The length of the "nodes" array must be equal to the length of the "colors" array.')
+
     print('\t Making a colormap from the provided colors and nodes')
 
     # Pick some values for colors and nodes if they are not specified
@@ -888,60 +903,61 @@ def make_custom_colormap(colors=None, nodes=None, cmap_name=None, show_plot=Fals
     return cmap_custom
 
 
-def make_custom_segmented_colormap(colors=None, nodes=None, show_plot=False, cmap_name='custom'):
-    """
-    Create a custom segmented colormap from a list of colors and nodes.
+# def make_custom_segmented_colormap(colors=None, nodes=None, show_plot=False, cmap_name='custom'):
+#     """
+#     Create a custom segmented colormap from a list of colors and nodes.
 
-    Parameters
-    ----------
-    colors : list, optional
-        List of RGBA tuples for colormap colors (default is a preset list).
-    nodes : np.ndarray, optional
-        Array of values between 0 and 1 indicating color positions (default is evenly spaced).
-    show_plot : bool, optional
-        If True, display the colormap (default is False).
-    cmap_name : str, optional
-        Name for the colormap (default is 'custom').
+#     Parameters
+#     ----------
+#     colors : list, optional
+#         List of RGBA tuples for colormap colors (default is a preset list).
+#     nodes : np.ndarray, optional
+#         Array of values between 0 and 1 indicating color positions (default is evenly spaced).
+#     show_plot : bool, optional
+#         If True, display the colormap (default is False).
+#     cmap_name : str, optional
+#         Name for the colormap (default is 'custom').
 
-    Returns
-    -------
-    cmap_custom : LinearSegmentedColormap
-        The generated custom segmented colormap.
-    """
-    print('...Making a custom segmented colormap')
-    # Colors = a list of tuples for colors you want your colormap to be composed of, in RGBA or hex format.
-    # Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
-    #       -The first and last value must be 0 and 1, respectively.
-    #       -For example, if nodes = [0, 0.4, 0.8, 1], the first 40% of your colormap will be color[0], the next 40% will be color[1], and the final 20% will be color[2]
-    if colors is None:
-        print('WARNING: No input colors specified. Picking some default values....')
-        colors = [(1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1)]
-    if nodes is None:
-        print('WARNING: No input nodes specified. Picking an evenly-spaced array....')
-        nodes = np.linspace(0, 1.0, len(colors) + 1)  
+#     Returns
+#     -------
+#     cmap_custom : LinearSegmentedColormap
+#         The generated custom segmented colormap.
+#     """
+#     print('...Making a custom segmented colormap')
+#     # Colors = a list of tuples for colors you want your colormap to be composed of, in RGBA or hex format.
+#     # Nodes = a numpy array of values between 0 and 1 that indicate which "position" of the colormap you want each color to be tied to
+#     #       -The first and last value must be 0 and 1, respectively.
+#     #       -For example, if nodes = [0, 0.4, 0.8, 1], the first 40% of your colormap will be color[0], the next 40% will be color[1], and the final 20% will be color[2]
+#     if colors is None:
+#         print('WARNING: No input colors specified. Picking some default values....')
+#         colors = [(1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1)]
+#     if nodes is None:
+#         print('WARNING: No input nodes specified. Picking an evenly-spaced array....')
+#         nodes = np.linspace(0, 1.0, len(colors) + 1)  
 
-    # Do some data verification
-    elif nodes[0] != 0 or nodes[-1] != 1:
-        raise ValueError('The first and last values in the "nodes" array must be 0 and 1, respectively.')
-    if len(nodes) != (len(colors) + 1):
-        raise ValueError('The length of the "nodes" array must be one greater than the length of the "colors" array.')
+#     # Do some data verification
+#     elif nodes[0] != 0 or nodes[-1] != 1:
+#         raise ValueError('The first and last values in the "nodes" array must be 0 and 1, respectively.')
+#     if len(nodes) != (len(colors) + 1):
+#         raise ValueError('The length of the "nodes" array must be one greater than the length of the "colors" array.')
 
-    colors_new, nodes_new = convert_colors_and_nodes_for_segmented_cmap(colors, nodes)
+#     colors_new, nodes_new = convert_colors_and_nodes_for_segmented_cmap(colors, nodes)
 
-    cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes_new, colors_new)))
-    cmap_custom.name = cmap_name
+#     cmap_custom = LinearSegmentedColormap.from_list('custom', list(zip(nodes_new, colors_new)))
+#     cmap_custom.name = cmap_name
 
-    if show_plot == True:
-        plot_colormap(cmap=cmap_custom, nodes=nodes, plot_title='Your custom segmented colormap')
+#     if show_plot == True:
+#         plot_colormap(cmap=cmap_custom, nodes=nodes, plot_title='Your custom segmented colormap')
 
-    return cmap_custom
+#     return cmap_custom
 
 def convert_colors_and_nodes_for_segmented_cmap(colors, nodes):
     """
     This function takes a list of colors and a list of nodes, and returns new lists with the required duplications for use in LinearSegmentedColormap.from_list().
 
     In a segmented colormap, each color and node must be duplicated at segment boundaries to specify the color and value at each discontinuity. 
-    For example, if nodes = [0, 0.4, 0.8, 1], then nodes_new = [0, 0.4, 0.4, 0.8, 0.8, 1].
+    For example, if nodes = [0, 0.5, 1.0], then nodes_new = [0, 0.25, 0.25, 0.75, 0.75, 1.0], 
+    resulting in three "bands" of colors, with the middle one being the widest. 
 
     Parameters
     ----------
@@ -957,16 +973,14 @@ def convert_colors_and_nodes_for_segmented_cmap(colors, nodes):
     nodes_new : list
         Duplicated list of node positions for segment boundaries.
     """
-    nodes = [0] + list(nodes) + [1]
-    # colors = [tuple(color[:-1]) for color in colors]
-    colors_new = []
-    nodes_new = []
+    colors_new = [] 
+    nodes_new = [0]  # The first element of nodes_new is always 0
     for i in range(len(colors)):
         colors_new.extend([colors[i], colors[i]])
-    for i in range(len(nodes)):
-        nodes_new.extend([nodes[i], nodes[i]])
-    nodes_new = nodes_new[1:-1]  # Remove the first and last duplicated nodes, which are not needed
-
+    for i in range(len(nodes) - 1):
+        nodes_new.extend([np.mean([nodes[i], nodes[i + 1]]), np.mean([nodes[i], nodes[i + 1]])])
+    nodes_new.append(1)  # The last element of nodes_new is always 1
+    nodes_new = np.array(nodes_new)
     return colors_new, nodes_new
 
 def plot_colormap(cmap, nodes=None, plot_title=None):

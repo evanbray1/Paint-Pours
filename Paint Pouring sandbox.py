@@ -18,14 +18,14 @@ use('QtAgg')
 
 
 # ######## USER-DEFINED VARIABLES #########
-image_dimensions = [2560, 1440]
+image_dimensions = [1920, 1080]
 display_final_image = False        # Display the image on the screen?
 save_image = True                # Save a .png copy of your image?
 num_images = 1                   # How many images to produce?
 show_intermediate_plots = True  # Show intermediate results for troubleshooting?
-seed = None                     # Set a seed for reproducibility. If None, a seed is chosen randomly.
+seed = 1                    # Set a seed for reproducibility. If None, a seed is chosen randomly.
 base_cmap_name = 'custom'              # Colormap: 'any', 'custom', or a matplotlib colormap name like 'viridis' or 'bone'
-output_directory = './outputs/'
+output_directory = './outputs/recreating pour from emily/'
 
 
 ##########################################
@@ -40,7 +40,15 @@ results = pptools.generate_paint_pour_images(
     show_intermediate_plots=show_intermediate_plots,
     base_cmap_name=base_cmap_name,
     output_directory=output_directory,
-    # custom_cmap_colors=['#dadfdb', '#a2544c', '#e4bda2', '#f18c6b', '#5c3c37', '#ce9896', '#7a291c', '#ce3d47'],
+    use_segmented_colormap=False,
+    custom_cmap_colors=[
+        "#e8e2d4",
+        "#020a17",
+        "#da612d",
+        "#5e6563",
+        "#cdd7d5",
+        "#e0aa7f"
+    ], 
     seed=seed,
 )
 
