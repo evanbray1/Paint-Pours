@@ -18,7 +18,7 @@ use('QtAgg')
 
 
 # ######## USER-DEFINED VARIABLES #########
-image_dimensions = [1920, 1080]
+image_dimensions = [1080, 1080]
 display_final_image = False        # Display the image on the screen?
 save_image = True                # Save a .png copy of your image?
 num_images = 1                   # How many images to produce?
@@ -40,7 +40,7 @@ results = pptools.generate_paint_pour_images(
     show_intermediate_plots=show_intermediate_plots,
     base_cmap_name=base_cmap_name,
     output_directory=output_directory,
-    use_segmented_colormap=False,
+    use_segmented_colormap=True,
     custom_cmap_colors=[
         "#e8e2d4",
         "#020a17",
