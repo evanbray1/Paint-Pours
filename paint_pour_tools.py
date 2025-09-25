@@ -1326,3 +1326,185 @@ def generate_paint_pour_images(num_images=1, **kwargs):
         results.append((image, paint_pour))
 
     return results
+
+
+def create_similar_images(metadata_filepath, num_images=10, **user_overrides):
+    """
+    Generate similar images based on parameters from a metadata CSV file.
+    
+    This function reads parameters from a metadata file produced by a previous paint pour 
+    image generation and creates new images with the same parameters, but with unique seeds.
+    User can override any parameters as needed.
+
+    Parameters
+    ----------
+    metadata_filepath : str
+        Path to the CSV metadata file from a previous paint pour image.
+    num_images : int, optional
+        Number of similar images to generate (default is 10).
+    **user_overrides : keyword arguments
+        Any parameters to override from the metadata file. These take priority
+        over the parameters in the metadata file.
+
+    Returns
+    -------
+    results : list of tuples
+        List of (image, paint_pour_object) tuples for each generated image.
+
+    Examples
+    --------
+    # Generate 10 similar images with same parameters
+    results = create_similar_images('path/to/metadata.csv')
+
+    # Generate 5 similar images but with different resolution
+    results = create_similar_images(
+        'path/to/metadata.csv', 
+        num_images=5,
+        image_dimensions=[1920, 1080]
+    )
+
+    # Generate similar images with different colormap levels
+    results = create_similar_images(
+        'path/to/metadata.csv',
+        num_images=3,
+        num_colormap_levels=50
+    )
+    """
+    # Read and parse the metadata CSV file
+    metadata_params = _load_metadata_from_csv(metadata_filepath)
+    
+    # Set required defaults that should override metadata file unless user specifies
+    metadata_params['show_intermediate_plots'] = False
+    metadata_params['save_in_cmap_subdirectory'] = False
+    
+    # Apply user overrides
+    metadata_params.update(user_overrides)
+    
+    # Set up output directory - create 'from_metadata_file' subdirectory
+    original_output_dir = metadata_params.get('output_directory', './output_data/')
+    new_output_dir = os.path.join(original_output_dir, 'from_metadata_file')
+    metadata_params['output_directory'] = new_output_dir
+    
+    # Ensure output directory exists
+    if not os.path.exists(new_output_dir):
+        os.makedirs(new_output_dir)
+    
+    # Generate images with unique seeds
+    results = []
+    base_seed = np.random.randint(1, int(1e8))  # Generate a random base seed
+    
+    print(f'Creating {num_images} similar images based on metadata from: {metadata_filepath}')
+    print(f'Images will be saved to: {new_output_dir}')
+    
+    for i in range(num_images):
+        print(f'\n\nGenerating similar image {i + 1} of {num_images}')
+        
+        # Use unique seed for each image
+        current_params = metadata_params.copy()
+        current_params['seed'] = base_seed + i
+        
+        image, paint_pour = generate_paint_pour_image(**current_params)
+        results.append((image, paint_pour))
+
+    return results
+
+
+def _load_metadata_from_csv(csv_filepath):
+    """
+    Load metadata parameters from a CSV file and convert them to appropriate data types.
+    
+    Parameters
+    ----------
+    csv_filepath : str
+        Path to the CSV metadata file.
+        
+    Returns
+    -------
+    params : dict
+        Dictionary of parameters with appropriate data types.
+    """
+    import ast
+    
+    if not os.path.exists(csv_filepath):
+        raise FileNotFoundError(f"Metadata file not found: {csv_filepath}")
+    
+    params = {}
+    
+    with open(csv_filepath, 'r', newline='', encoding='utf-8') as file:
+        reader = csv.reader(file)
+        header = next(reader)  # Skip header row
+        
+        if header != ['attribute', 'value']:
+            raise ValueError(f"Invalid CSV format. Expected ['attribute', 'value'], got {header}")
+        
+        for row in reader:
+            if len(row) != 2:
+                continue
+                
+            attr_name, attr_value = row
+            
+            # Skip private/internal attributes that start with underscore
+            if attr_name.startswith('_'):
+                continue
+                
+            # Skip attributes that shouldn't be used for new image generation
+            skip_attrs = {'filename', 'kwargs'}
+            if attr_name in skip_attrs:
+                continue
+            
+            # Convert string values back to appropriate data types
+            params[attr_name] = _convert_metadata_value(attr_name, attr_value)
+    
+    return params
+
+
+def _convert_metadata_value(attr_name, attr_value):
+    """
+    Convert a string value from the metadata CSV back to its appropriate data type.
+    
+    Parameters
+    ----------
+    attr_name : str
+        Name of the attribute.
+    attr_value : str
+        String value from the CSV file.
+        
+    Returns
+    -------
+    converted_value
+        Value converted to appropriate data type.
+    """
+    import ast
+    
+    # Handle None values
+    if attr_value == 'None':
+        return None
+    
+    # Handle boolean values
+    if attr_value in ['True', 'False']:
+        return attr_value == 'True'
+    
+    # Handle numeric values (integers and floats)
+    try:
+        # Try integer first
+        if '.' not in attr_value and 'e' not in attr_value.lower():
+            return int(attr_value)
+        else:
+            return float(attr_value)
+    except ValueError:
+        pass
+    
+    # Handle list/array values (like image_dimensions, octave_powers)
+    if attr_value.startswith('[') and attr_value.endswith(']'):
+        try:
+            # Use ast.literal_eval for safe evaluation of literals
+            return ast.literal_eval(attr_value)
+        except (ValueError, SyntaxError):
+            pass
+    
+    # Handle string values that might contain quotes
+    if attr_value.startswith('"') and attr_value.endswith('"'):
+        return attr_value[1:-1]  # Remove quotes
+    
+    # Return as string if no other conversion worked
+    return attr_value
