@@ -17,6 +17,7 @@ This tool is presented here for two categories of people.
 ## Features
 - **Easy to Use:** Easily create paint pour-style images from a single function call with very few required parameters 
 - **Customizable Parameters:** Over a dozen variables can be tweaked manually for creative control, or left to be randomly chosen from sensible ranges.
+- **Metadata-Based Similar Image Generation:** Generate multiple similar images based on parameters from a metadata file. Perfect for when you find a favorite image and want to create variations with the same style but different seeds. The `create_similar_images()` function reads parameters from CSV metadata files and allows user overrides for specific parameters like resolution or colormap levels.
 - **Voronoi Cell Overlays:** Add cell-like structures to simulate effects seen in real acrylic pours. Although best visualized with the 'prominent_cells' argument, more features are coming to incorporate these cells structures at smaller scales in ways that more closely mimic real paint pours.
 - **Prominent Cells Mode:** The `prominent_cells` option produces a fundamentally different style of image by manipulating variable ranges, resulting in large "cells" (as the paint pour artists call them) being prominently featured in the foreground. This style was popular enough during user-testing that it warranted its own dedicated preset.
 - **Flexible Saving:** Save images to a specified directory or default-chosen one, already properly rendered in the desired resolution. Or simply display them interactively.
@@ -70,7 +71,6 @@ This project requires no special installation instructions, aside from several c
 - **Silicone oil "cells":** When silicone oil is added to the paint mixture in certain layers, it changers the surface tension properties of that layer, which results in that layer breaking when it gets thin enough, and allowing the lower layers to show through. For example, the below image has lots of these cells. This has proven a tricky feature to simulate.
   - ![paint pour with cells](https://github.com/user-attachments/assets/db4a4a1e-d9e6-44b5-8413-62084241b013)
 
-- **Inter-layer blending:** Sometimes, the artist will purposefully, loosely mix two colors of paint so they are not quite homogenous _prior_ to pouring them onto the canvas. The image shown at the top of this README exhibits some of this. This can be done by craftily converting some portions of the segmented colormap to a continuous colormap. 
 - **Like-color grouping:** This is exhibited in the image at the top of this page, where there are several shades of red and brown appearing in a horizontal band through the middle, and a band of pinks and whites just beneath it. Currently, segmented colormaps are produced by _completely_ randomly sampling the chosen base colormap. By incorporating some bias to this choice, or sampling multiple colors in batches from subsections of the base colormap, I believe this effect can be recreated digitally. 
 
 ## Contact
