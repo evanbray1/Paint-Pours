@@ -31,6 +31,7 @@ output_directory = './outputs/recreating pour from emily/'
 ##########################################
 print(f'Generating {num_images} paint pour images...')
 
+#%%
 # Generate all images using a convenient function
 results = pptools.generate_paint_pour_images(
     num_images=num_images,

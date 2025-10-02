@@ -259,10 +259,11 @@ class PaintPour:
         self._random_seed = np.random.randint(1, int(1e8))
 
         # Random values for octave_powers
-        self._random_octave_powers = np.array([1,
-            np.round(np.random.uniform(0.1, 0.9), 1),
-            np.round(np.random.uniform(0.0, 0.2), 2),
-            np.random.choice([0.01, 0.04, 0.08])])
+        self._random_octave_powers = list([1.0,
+            float(np.round(np.random.uniform(0.1, 0.9), 1)),
+            float(np.round(np.random.uniform(0.0, 0.2), 2)),
+            float(np.random.choice([0.01, 0.04, 0.08]))])
+        
 
         # Random value for stretch_value
         self._random_stretch_value = np.random.randint(-2, 3)
