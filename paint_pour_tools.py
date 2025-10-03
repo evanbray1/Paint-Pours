@@ -127,12 +127,12 @@ class PaintPour:
         # Display and save the image (as well a a separate file of its metadata, if desired)
         my_dpi = 120
         fig, ax = plt.subplots(1, figsize=(self.image_dimensions[0] / my_dpi, self.image_dimensions[1] / my_dpi), dpi=my_dpi)
-        
+
         # Verify DPI was set correctly
         if abs(fig.dpi - my_dpi) > 0.1:
             print(f'WARNING: Figure DPI ({fig.dpi}) does not match expected DPI ({my_dpi})')
             fig.set_dpi(my_dpi)  # Force set it again
-        
+
         ax.set_position([0, 0, 1, 1])  # Make the axes fill the figure
         ax.axis('off')  # Remove axes, ticks, labels to ensure clean image
         ax.imshow(self.paint_pour_surface, cmap=self.final_colormap, origin='lower')
@@ -143,7 +143,7 @@ class PaintPour:
         # if actual_width != self.image_dimensions[0] or actual_height != self.image_dimensions[1]:
         #     print(f'WARNING: The actual image size ({actual_width}x{actual_height}) does not match the requested size ({self.image_dimensions[0]}x{self.image_dimensions[1]}). This is likely due to your system DPI settings. The saved image will still be the correct size, but the on-screen display may be off.')
         #     raise ValueError('Image size mismatch')
-        
+
         # # Get the image data as a 2D array of 8-bit ARGB values
         # # Draw the figure on the canvas to ensure it's rendered
         # fig.canvas.draw()
@@ -172,13 +172,13 @@ class PaintPour:
                 os.makedirs(self.output_directory)
             fig.savefig(os.path.join(self.output_directory, self.filename), dpi=my_dpi, bbox_inches=None, pad_inches=0)
             print(f'***Image saved to: {self.output_directory}')
-            
+
             # # Open the newly-saved image and verify its size
             # saved_image = cv2.imread(os.path.join(self.output_directory, self.filename))
             # if saved_image is None:
             #     print(f'ERROR: Could not load saved image {self.filename}')
             #     raise ValueError('Could not load saved image')
-            
+
             # actual_saved_height, actual_saved_width = saved_image.shape[:2]
             # if actual_saved_width != self.image_dimensions[0] or actual_saved_height != self.image_dimensions[1]:
             #     print(f'ERROR: The saved image size ({actual_saved_width}x{actual_saved_height}) does not match the requested size ({self.image_dimensions[0]}x{self.image_dimensions[1]})')
@@ -230,6 +230,17 @@ class PaintPour:
             if self.use_segmented_colormap:
                 colors, nodes = convert_colors_and_nodes_for_segmented_cmap(colors, nodes)
 
+            # Two identical nodes in a row will create a sharp boundary between two colors. 
+            # Take the left of these two nodes as subtract from it a fraction of the difference between it and the node prior
+            # This will have the effect of smoothing the edges between the colors slightly. 
+            # nodes[1::2] = nodes[1::2] - 0.1 * (nodes[1::2] - nodes[0::2])
+            # nodes[-1] = 1  # The final node must equal one
+
+            # Randomly get rid of a few nodes/colors to produce some gradients between a fraction of levels. 
+            indices_to_remove = np.random.choice(np.arange(self.num_colormap_levels - 1) * 2 + 1, size=int(0.2 * self.num_colormap_levels), replace=False)
+            nodes = np.delete(nodes, indices_to_remove)
+            colors = np.delete(colors, indices_to_remove)
+
             print(f'\t Final colormap will have {self.num_colormap_levels} distinct levels')
             self.final_colormap = make_custom_colormap(colors=self.base_colormap(colors), nodes=nodes,
                                         cmap_name=self.base_colormap.name, show_plot=False)
@@ -263,7 +274,6 @@ class PaintPour:
             float(np.round(np.random.uniform(0.1, 0.9), 1)),
             float(np.round(np.random.uniform(0.0, 0.2), 2)),
             float(np.random.choice([0.01, 0.04, 0.08]))])
-        
 
         # Random value for stretch_value
         self._random_stretch_value = np.random.randint(-2, 3)
@@ -282,7 +292,7 @@ class PaintPour:
 
         # Pre-generate a large number of colors for colormap (these are used in pick_paint_pour_colormap)
         max_levels = 10000  # Generate enough random values for a huge number of colormap levels. More than the user could ever want.
-        self._random_colormap_colors = np.random.uniform(low=0, high=1, size=max_levels)
+        self._random_colormap_colors = np.random.uniform(low=0, high=1, size=max_levels).astype(float).tolist()
 
         # Pre-generate nodes for colormap (these are used in pick_paint_pour_colormap)
         # Don't worry about them not being sorted yet - that happens later.   
@@ -1332,7 +1342,7 @@ def generate_paint_pour_images(num_images=1, **kwargs):
 def create_similar_images(metadata_filepath, num_images=10, **user_overrides):
     """
     Generate similar images based on parameters from a metadata CSV file.
-    
+
     This function reads parameters from a metadata file produced by a previous paint pour 
     image generation and creates new images with the same parameters, but with unique seeds.
     User can override any parameters as needed.
@@ -1373,37 +1383,37 @@ def create_similar_images(metadata_filepath, num_images=10, **user_overrides):
     """
     # Read and parse the metadata CSV file
     metadata_params = _load_metadata_from_csv(metadata_filepath)
-    
+
     # Set required defaults that should override metadata file unless user specifies
     metadata_params['show_intermediate_plots'] = False
     metadata_params['save_in_cmap_subdirectory'] = False
-    
+
     # Apply user overrides
     metadata_params.update(user_overrides)
-    
+
     # Set up output directory - create 'from_metadata_file' subdirectory
     original_output_dir = metadata_params.get('output_directory', './output_data/')
     new_output_dir = os.path.join(original_output_dir, 'from_metadata_file')
     metadata_params['output_directory'] = new_output_dir
-    
+
     # Ensure output directory exists
     if not os.path.exists(new_output_dir):
         os.makedirs(new_output_dir)
-    
+
     # Generate images with unique seeds
     results = []
     base_seed = np.random.randint(1, int(1e8))  # Generate a random base seed
-    
+
     print(f'Creating {num_images} similar images based on metadata from: {metadata_filepath}')
     print(f'Images will be saved to: {new_output_dir}')
-    
+
     for i in range(num_images):
         print(f'\n\nGenerating similar image {i + 1} of {num_images}')
-        
+
         # Use unique seed for each image
         current_params = metadata_params.copy()
         current_params['seed'] = base_seed + i
-        
+
         image, paint_pour = generate_paint_pour_image(**current_params)
         results.append((image, paint_pour))
 
@@ -1413,78 +1423,77 @@ def create_similar_images(metadata_filepath, num_images=10, **user_overrides):
 def _load_metadata_from_csv(csv_filepath):
     """
     Load metadata parameters from a CSV file and convert them to appropriate data types.
-    
+
     Parameters
     ----------
     csv_filepath : str
         Path to the CSV metadata file.
-        
+
     Returns
     -------
     params : dict
         Dictionary of parameters with appropriate data types.
     """
-    import ast
-    
+
     if not os.path.exists(csv_filepath):
         raise FileNotFoundError(f"Metadata file not found: {csv_filepath}")
-    
+
     params = {}
-    
+
     with open(csv_filepath, 'r', newline='', encoding='utf-8') as file:
         reader = csv.reader(file)
         header = next(reader)  # Skip header row
-        
+
         if header != ['attribute', 'value']:
             raise ValueError(f"Invalid CSV format. Expected ['attribute', 'value'], got {header}")
-        
+
         for row in reader:
             if len(row) != 2:
                 continue
-                
+
             attr_name, attr_value = row
-            
+
             # Skip private/internal attributes that start with underscore
             if attr_name.startswith('_'):
                 continue
-                
+
             # Skip attributes that shouldn't be used for new image generation
             skip_attrs = {'filename', 'kwargs'}
             if attr_name in skip_attrs:
                 continue
-            
+
             # Convert string values back to appropriate data types
             params[attr_name] = _convert_metadata_value(attr_name, attr_value)
-    
+
     return params
 
 
 def _convert_metadata_value(attr_name, attr_value):
     """
     Convert a string value from the metadata CSV back to its appropriate data type.
-    
+
     Parameters
     ----------
     attr_name : str
         Name of the attribute.
     attr_value : str
         String value from the CSV file.
-        
+
     Returns
     -------
     converted_value
         Value converted to appropriate data type.
     """
     import ast
-    
+
     # Handle None values
     if attr_value == 'None':
         return None
-    
+
     # Handle boolean values
     if attr_value in ['True', 'False']:
         return attr_value == 'True'
-    
+
     # Handle numeric values (integers and floats)
     try:
         # Try integer first
@@ -1494,7 +1503,7 @@ def _convert_metadata_value(attr_name, attr_value):
             return float(attr_value)
     except ValueError:
         pass
-    
+
     # Handle list/array values (like image_dimensions, octave_powers)
     if attr_value.startswith('[') and attr_value.endswith(']'):
         try:
@@ -1502,10 +1511,10 @@ def _convert_metadata_value(attr_name, attr_value):
             return ast.literal_eval(attr_value)
         except (ValueError, SyntaxError):
             pass
-    
+
     # Handle string values that might contain quotes
     if attr_value.startswith('"') and attr_value.endswith('"'):
         return attr_value[1:-1]  # Remove quotes
-    
+
     # Return as string if no other conversion worked
     return attr_value
