@@ -103,7 +103,13 @@ class PaintPour:
         # Add cells if needed
         if self.add_cells and not self.prominent_cells:
             warnings.warn('WARNING: the add_cells parameter isnt fully implemented yet. Try setting prominent_cells=True instead for now')
-        if self.add_cells:
+            cell_field = make_cell_image(self.image_dimensions, 
+                                         num_voronoi_points=self._random_num_voronoi_points, 
+                                         show_plots=self.show_intermediate_plots, 
+                                         gauss_smoothing_sigma=self.gauss_smoothing_sigma,
+                                         threshold_percentile=self.threshold_percentile, 
+                                         include_perimeter_regions=False)
+        if self.prominent_cells:
             # Use pre-generated random values for deterministic behavior
             include_perimeter_regions = self._random_include_perimeter
             self.gauss_smoothing_sigma = 6
@@ -112,13 +118,9 @@ class PaintPour:
             cell_field = make_cell_image(self.image_dimensions, num_voronoi_points=num_voronoi_points, show_plots=self.show_intermediate_plots, gauss_smoothing_sigma=self.gauss_smoothing_sigma,
                                          threshold_percentile=self.threshold_percentile, include_perimeter_regions=include_perimeter_regions)
             ind = np.where(cell_field == 1)
-            if self.prominent_cells:
-                cell_field_prominence = self._random_cell_field_prominence
-                self.paint_pour_surface += cell_field_prominence * cell_field
-                self.paint_pour_surface = (self.paint_pour_surface - np.nanmin(self.paint_pour_surface)) / (np.nanmax(self.paint_pour_surface) - np.nanmin(self.paint_pour_surface))
-            else:
-                self.paint_pour_surface[ind] = 1.01
-                self.final_colormap.set_over(self.base_colormap(self._random_colormap_over_value))
+            cell_field_prominence = self._random_cell_field_prominence
+            self.paint_pour_surface += cell_field_prominence * cell_field
+            self.paint_pour_surface = (self.paint_pour_surface - np.nanmin(self.paint_pour_surface)) / (np.nanmax(self.paint_pour_surface) - np.nanmin(self.paint_pour_surface))
 
         # Turn off interactive plotting if you don't want to see the final image displayed on-screen
         if not self.display_final_image:
@@ -712,7 +714,7 @@ def make_voronoi(npoints, width, height):
     return Voronoi(points)
 
 
-def voronoi_to_points(voronoi, spacing):
+def voronoi_to_points(voronoi, spacing=1):
     """
     Convert Voronoi diagram ridges to a series of (x, y) points with specified spacing.
 
