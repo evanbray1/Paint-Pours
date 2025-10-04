@@ -138,28 +138,6 @@ class PaintPour:
         ax.imshow(self.paint_pour_surface, cmap=self.final_colormap, origin='lower')
         plt.show(block=False)
 
-        # # Verify that the figure is the correct size
-        # actual_width, actual_height = fig.canvas.get_width_height()
-        # if actual_width != self.image_dimensions[0] or actual_height != self.image_dimensions[1]:
-        #     print(f'WARNING: The actual image size ({actual_width}x{actual_height}) does not match the requested size ({self.image_dimensions[0]}x{self.image_dimensions[1]}). This is likely due to your system DPI settings. The saved image will still be the correct size, but the on-screen display may be off.')
-        #     raise ValueError('Image size mismatch')
-
-        # # Get the image data as a 2D array of 8-bit ARGB values
-        # # Draw the figure on the canvas to ensure it's rendered
-        # fig.canvas.draw()
-
-        # # Get the RGBA buffer from the figure canvas
-        # buf = np.frombuffer(fig.canvas.tostring_argb(), dtype=np.uint8)
-
-        # # Get the figure size in pixels and check to make sure it matches the requested size
-        # width, height = fig.canvas.get_width_height()
-        # if width != self.image_dimensions[0] or height != self.image_dimensions[1]:
-        #     print(f'ERROR: The actual image size ({width}x{height}) does not match the requested size ({self.image_dimensions[0]}x{self.image_dimensions[1]}). This is likely due to your system DPI settings. The saved image will still be the correct size, but the on-screen display may be off.')
-        #     raise ValueError('Image size mismatch, this is a necessary condition!')
-
-        # # Reshape the buffer to a 3D array (height, width, 4)
-        # rgb_array = buf.reshape((height, width, 4))
-
         # Create a base filename
         if self.save_image:
             self.filename = f"{self.base_colormap.name}_{self.num_colormap_levels}levels_" + "_".join([f"{i:.2f}" for i in self.octave_powers[1:]]) + f"_exponent{self.rescaling_exponent:.0f}_stretch{self.stretch_value:.0f}"
@@ -172,19 +150,6 @@ class PaintPour:
                 os.makedirs(self.output_directory)
             fig.savefig(os.path.join(self.output_directory, self.filename), dpi=my_dpi, bbox_inches=None, pad_inches=0)
             print(f'***Image saved to: {self.output_directory}')
-
-            # # Open the newly-saved image and verify its size
-            # saved_image = cv2.imread(os.path.join(self.output_directory, self.filename))
-            # if saved_image is None:
-            #     print(f'ERROR: Could not load saved image {self.filename}')
-            #     raise ValueError('Could not load saved image')
-
-            # actual_saved_height, actual_saved_width = saved_image.shape[:2]
-            # if actual_saved_width != self.image_dimensions[0] or actual_saved_height != self.image_dimensions[1]:
-            #     print(f'ERROR: The saved image size ({actual_saved_width}x{actual_saved_height}) does not match the requested size ({self.image_dimensions[0]}x{self.image_dimensions[1]})')
-            #     print(f'Expected: {self.image_dimensions[0]}x{self.image_dimensions[1]}, Got: {actual_saved_width}x{actual_saved_height}')
-            #     print(f'Figure size: {fig.get_size_inches()}, DPI: {fig.dpi}')
-            #     raise ValueError('Saved image size mismatch - this is critical for your use case')
 
             if self.save_metadata is True:
                 print('...Saving metadata to .csv file')
@@ -357,7 +322,7 @@ class PaintPour:
 
         # Loop through the class attributes one at a time
         for attr in dir(self):
-            if attr.startswith('__') or callable(getattr(self, attr)):  # Ignore the methods and Python's built-in attributes
+            if attr.startswith('__') or attr.startswith('_') or callable(getattr(self, attr)):  # Ignore the methods and Python's built-in attributes
                 continue
 
             value = getattr(self, attr)  # Grab the attribute
