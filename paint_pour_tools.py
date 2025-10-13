@@ -317,6 +317,8 @@ class PaintPour:
             self.base_colormap = make_custom_colormap(colors=colors_temp, nodes=nodes_temp, show_plot=False)
         else:
             self.base_colormap = plt.cm.get_cmap(self.base_cmap_name)
+            if self.custom_cmap_colors is not None:
+                warnings.warn("WARNING: You specified custom_cmap_colors, but base_cmap_name is not 'custom'. Ignoring custom_cmap_colors.")
         self.base_colormap = self.base_colormap.resampled(10000)
         print(f'...Making new colormap from the colors of your base colormap: {self.base_colormap.name}')
 
@@ -324,13 +326,16 @@ class PaintPour:
         if self.show_intermediate_plots:
             plot_colormap(cmap=self.base_colormap, plot_title='Your base colormap, ' + self.base_colormap.name)
 
-        # Make a segmented colormap, UNLESS the user specified 'continuous' for num_colormap_levels
-        # if self.num_colormap_levels != 'use base colormap':
-        # Use pre-generated random values for deterministic behavior
-        # Take only the number of colors we need from the pre-generated values
-        colors = self._random_colormap_colors[:self.num_colormap_levels]
-        nodes = np.sort(self._random_colormap_nodes[:len(colors) - 2])
-        nodes = [0] + list(nodes) + [1]  # The first and last nodes must be 0 and 1, respectively.
+        # Produce the colors and nodes for the final colormap, unless the user specified to just use the base colormap
+        if self.num_colormap_levels != 'use base colormap':
+            # Use pre-generated random values for deterministic behavior
+            # Take only the number of colors we need from the pre-generated values
+            colors = self._random_colormap_colors[:self.num_colormap_levels]
+            nodes = np.sort(self._random_colormap_nodes[:len(colors) - 2])
+            nodes = [0] + list(nodes) + [1]  # The first and last nodes must be 0 and 1, respectively.
+        else:
+            nodes = [0,1] # Dummy values, to keep the optional colormap plots happy
+            print('\t Using the base colormap as the final colormap')
 
         # Convert the colors and nodes to a format suitable for a segmented colormap, if needed
         if self.use_segmented_colormap:
@@ -348,8 +353,17 @@ class PaintPour:
             colors = np.delete(colors, indices_to_remove)
 
         print(f'\t Final colormap will have {self.num_colormap_levels} distinct levels')
-        self.final_colormap = make_custom_colormap(colors=self.base_colormap(colors), nodes=nodes,
-                                    cmap_name=self.base_colormap.name, show_plot=False)
+        if self.prominent_cells:
+            if self.base_cmap_name == 'custom':
+                warnings.warn('WARNING: base_cmap_name == custom is not currently supported when prominent_cells == True')
+            elif self.num_colormap_levels == 'use base colormap':
+                self.final_colormap = plt.cm.get_cmap(self.base_colormap.name)
+            else:
+                raise ValueError('Incompatible combination of colormap parameters detected.\
+                                Try setting base_cmap to a named cmap')
+        else:
+            self.final_colormap = make_custom_colormap(colors=self.base_colormap(colors), nodes=nodes,
+                                        cmap_name=self.base_colormap.name, show_plot=False)
 
         # Plot the final colormap, if desired
         if self.show_intermediate_plots:

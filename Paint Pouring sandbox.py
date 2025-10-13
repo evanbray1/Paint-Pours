@@ -25,8 +25,8 @@ save_image = True                # Save a .png copy of your image?
 num_images = 1                  # How many images to produce?
 show_intermediate_plots = True  # Show intermediate results for troubleshooting?
 seed = 1                    # Set a seed for reproducibility. If None, a seed is chosen randomly.
-base_cmap_name = 'viridis'              # Colormap: 'any', 'custom', or a matplotlib colormap name like 'viridis' or 'bone'
-output_directory = './outputs/testing/'
+base_cmap_name = 'custom'              # Colormap: 'any', 'custom', or a matplotlib colormap name like 'viridis' or 'bone'
+output_directory = './outputs/recreating pour from emily/'
 
 
 ##########################################
@@ -50,8 +50,7 @@ results = pptools.generate_paint_pour_images(
         "#cdd7d5",
         "#e0aa7f"
     ], 
-    seed=seed,
-    prominent_cells=False,
+    seed=seed
 )
 
 print(f'Successfully generated {len(results)} images!')   
