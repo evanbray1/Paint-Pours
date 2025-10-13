@@ -29,7 +29,7 @@ class PaintPour:
                  num_colormap_levels=None,
                  prominent_cells=False,
                  save_in_cmap_subdirectory=False,
-                 use_segmented_colormap=False,
+                 use_segmented_colormap=True,
                  **kwargs):
         '''A class for generating paint pour images.'''
 
@@ -117,126 +117,150 @@ class PaintPour:
                 self.paint_pour_surface[ind] = 1.01
                 self.final_colormap.set_over(self.base_colormap(self._random_colormap_over_value))
         elif self.add_cells:
-            self.gauss_smoothing_sigma = 10
-            self.threshold_percentile = 40
-            num_voronoi_points = 300 # Don't make this much smaller than ~20
-            cell_field = make_cell_image(self.image_dimensions, num_voronoi_points=num_voronoi_points, show_plots=self.show_intermediate_plots, gauss_smoothing_sigma=self.gauss_smoothing_sigma,
-                            threshold_percentile=self.threshold_percentile, include_perimeter_regions=False)
-            ind = np.where(cell_field == 1)
-            plt.imshow(cell_field)
+            raise NotImplementedError("The 'add_cells' option is not fully implemented yet.")
+            # self.gauss_smoothing_sigma = 10
+            # self.threshold_percentile = 40
+            # num_voronoi_points = 300  # Don't make this much smaller than ~20
+            # cell_field = make_cell_image(self.image_dimensions, num_voronoi_points=num_voronoi_points, show_plots=self.show_intermediate_plots, gauss_smoothing_sigma=self.gauss_smoothing_sigma,
+            #                 threshold_percentile=self.threshold_percentile, include_perimeter_regions=False)
+            # ind = np.where(cell_field == 1)
+            # # plt.imshow(cell_field)
             
-            def keep_median_regions(image, n_regions_to_keep):
-                """
-                Keep only the N middle-sized regions in a thresholded binary image, setting all others to 0.
+            # def keep_median_regions(image, n_regions_to_keep, show_plots=False):
+            #     """
+            #     Keep only the N middle-sized regions in a thresholded binary image, setting all others to 0.
 
-                Parameters
-                ----------
-                image : np.ndarray
-                    Binary image with thresholded regions (dtype=np.uint8).
-                n_regions_to_keep : int
-                    Number of middle-sized regions to preserve.
+            #     Parameters
+            #     ----------
+            #     image : np.ndarray
+            #         Binary image with thresholded regions (dtype=np.uint8).
+            #     n_regions_to_keep : int
+            #         Number of middle-sized regions to preserve.
+            #     show_plots : bool, optional
+            #         If True, display before/after comparison
 
-                Returns
-                -------
-                filtered_image : np.ndarray
-                    Image with only the N middle-sized regions preserved.
-                """
-                print(f'...Keeping only the {n_regions_to_keep} middle-sized regions')
+            #     Returns
+            #     -------
+            #     filtered_image : np.ndarray
+            #         Image with only the N middle-sized regions preserved.
+            #     """
+            #     print(f'...Keeping only the {n_regions_to_keep} middle-sized regions')
                 
-                # Find all contours in the image, calculate their area, and sort them by area
-                contours, hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-                contour_areas = get_contour_pixel_areas(image, contours)
-                sorted_indices = np.argsort(contour_areas)
+            #     # Find all contours in the image, calculate their area, and sort them by area
+            #     contours, hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            #     contour_areas = get_contour_pixel_areas(image, contours)
+            #     sorted_indices = np.argsort(contour_areas)
                 
-                # Calculate which indices to keep (middle N regions)
-                total_regions = len(sorted_indices)
-                if n_regions_to_keep >= total_regions:
-                    # If requesting more regions than available, keep all
-                    median_indices = sorted_indices
-                else:
-                    # Find the middle section
-                    start_idx = (total_regions - n_regions_to_keep) // 2
-                    end_idx = start_idx + n_regions_to_keep
-                    median_indices = sorted_indices[start_idx:end_idx]
+            #     # Calculate which indices to keep (middle N regions)
+            #     total_regions = len(sorted_indices)
+            #     if n_regions_to_keep >= total_regions:
+            #         # If requesting more regions than available, keep all
+            #         median_indices = sorted_indices
+            #     else:
+            #         # Find the middle section
+            #         start_idx = (total_regions - n_regions_to_keep) // 2
+            #         end_idx = start_idx + n_regions_to_keep
+            #         median_indices = sorted_indices[start_idx:end_idx]
                 
-                # Create new image with only the median-sized regions
-                filtered_image = np.zeros(image.shape, dtype=np.uint8)
-                for idx in median_indices:
-                    filtered_image = cv2.drawContours(filtered_image, contours, contourIdx=idx, color=1, thickness=-1)
-                
-                return filtered_image
-            
-            cell_field = keep_median_regions(cell_field.astype(np.uint8), n_regions_to_keep=10)
-            plt.imshow(cell_field)
-            
-            def erode_contours_by_area(image, area_threshold, show_plots=False):
-                """
-                Erode each contour in a thresholded binary image until its area falls below a threshold.
-
-                Parameters
-                ----------
-                image : np.ndarray
-                    Binary image with thresholded regions (dtype=np.uint8).
-                area_threshold : int
-                    Maximum area (in pixels) to keep after erosion.
-                show_plots : bool, optional
-                    If True, display before/after comparison (default is False).
-
-                Returns
-                -------
-                eroded_image : np.ndarray
-                    Image with all contours eroded to below the area threshold.
-                """
-                print(f'...Eroding contours until area < {area_threshold} pixels')
-                
-                # Find all contours in the image
-                contours, hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-                
-                if show_plots:
-                    original_areas = get_contour_pixel_areas(image, contours)
-                    print(f'Original areas: {original_areas}')
-                
-                # Create output image
-                eroded_image = np.zeros(image.shape, dtype=np.uint8)
-                
-                # Process each contour individually
-                for i, contour in enumerate(contours):
-                    # Create temporary image with just this contour
-                    temp_image = np.zeros(image.shape, dtype=np.uint8)
-                    temp_image = cv2.drawContours(temp_image, [contour], -1, 1, thickness=-1)
+            #     # Create new image with only the median-sized regions
+            #     filtered_image = np.zeros(image.shape, dtype=np.uint8)
+            #     for idx in median_indices:
+            #         filtered_image = cv2.drawContours(filtered_image, contours, contourIdx=idx, color=1, thickness=-1)
                     
-                    # Erode until area is below threshold
-                    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-                    current_area = np.count_nonzero(temp_image)
+            #     if show_plots:
+            #         final_contours, _ = cv2.findContours(filtered_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            #         final_areas = get_contour_pixel_areas(filtered_image, final_contours)
                     
-                    while current_area >= area_threshold:
-                        temp_image = cv2.erode(temp_image, kernel, iterations=1)
-                        current_area = np.count_nonzero(temp_image)
+            #         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+            #         ax1.imshow(image)
+            #         ax1.set_title('Original Image')
+            #         ax2.imshow(filtered_image)
+            #         ax2.set_title('Filtered Image')
+            #         fig.tight_layout()
+            #         plt.show(block=False)
+                
+            #     return filtered_image
+            
+            # # Keep only the N median-sized regions
+            # cell_field = keep_median_regions(cell_field.astype(np.uint8), n_regions_to_keep=10, show_plots=True)
+            # # plt.imshow(cell_field)
+            
+            # def erode_contours_by_area(image, area_threshold, show_plots=False):
+            #     """
+            #     Erode each contour in a thresholded binary image until its area falls below a threshold.
+
+            #     Parameters
+            #     ----------
+            #     image : np.ndarray
+            #         Binary image with thresholded regions (dtype=np.uint8).
+            #     area_threshold : int
+            #         Maximum area (in pixels) to keep after erosion.
+            #     show_plots : bool, optional
+            #         If True, display before/after comparison (default is False).
+
+            #     Returns
+            #     -------
+            #     eroded_image : np.ndarray
+            #         Image with all contours eroded to below the area threshold.
+            #     """
+            #     print(f'...Eroding contours until area < {area_threshold} pixels')
+                
+            #     # Find all contours in the image
+            #     contours, hierarchy = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+                
+            #     if show_plots:
+            #         original_areas = get_contour_pixel_areas(image, contours)
+            #         print(f'Original areas: {original_areas}')
+                
+            #     # Create output image
+            #     eroded_image = np.zeros(image.shape, dtype=np.uint8)
+                
+            #     # Process each contour individually
+            #     for i, contour in enumerate(contours):
+            #         # Create temporary image with just this contour
+            #         temp_image = np.zeros(image.shape, dtype=np.uint8)
+            #         temp_image = cv2.drawContours(temp_image, [contour], -1, 1, thickness=-1)
+                    
+            #         # Erode until area is below threshold
+            #         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+            #         current_area = np.count_nonzero(temp_image)
+                    
+            #         while current_area >= area_threshold:
+            #             temp_image = cv2.erode(temp_image, kernel, iterations=1)
+            #             current_area = np.count_nonzero(temp_image)
                         
-                        # Safety check to prevent infinite loop
-                        if current_area == 0:
-                            break
+            #             # Safety check to prevent infinite loop
+            #             if current_area == 0:
+            #                 break
                     
-                    # Add eroded contour to final image
-                    eroded_image = cv2.bitwise_or(eroded_image, temp_image)
+            #         # Add eroded contour to final image
+            #         eroded_image = cv2.bitwise_or(eroded_image, temp_image)
                 
-                if show_plots:
-                    final_contours, _ = cv2.findContours(eroded_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-                    final_areas = get_contour_pixel_areas(eroded_image, final_contours)
-                    print(f'Final areas: {final_areas}')
+            #     if show_plots:
+            #         final_contours, _ = cv2.findContours(eroded_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            #         final_areas = get_contour_pixel_areas(eroded_image, final_contours)
+            #         print(f'Final areas: {final_areas}')
                     
-                    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-                    ax1.imshow(image)
-                    ax1.set_title('Original Image')
-                    ax2.imshow(eroded_image)
-                    ax2.set_title('Eroded Image')
-                    fig.tight_layout()
-                    plt.show(block=False)
+            #         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+            #         ax1.imshow(image)
+            #         ax1.set_title('Original Image')
+            #         ax2.imshow(eroded_image)
+            #         ax2.set_title('Eroded Image')
+            #         fig.tight_layout()
+            #         plt.show(block=False)
                 
-                return eroded_image
+            #     return eroded_image
             
-            cell_field = erode_contours_by_area(cell_field.astype(np.uint8), area_threshold=1000, show_plots=True)
-            plt.imshow(cell_field)
+            # # Erode contours until they are below a certain area threshold
+            # cell_field = erode_contours_by_area(cell_field.astype(np.uint8), area_threshold=1000, show_plots=False)
+            # # plt.imshow(cell_field)
+            
+            # # Pick a random value between (0,1) that will be used to determine cell color
+            # cell_color = np.random.uniform(0, 1)
+            
+            # # Assign regions where cell_field == 1 to cell_color so they appear as a distinct color
+            # self.paint_pour_surface[cell_field == 1] = cell_color
+            
         # Turn off interactive plotting if you don't want to see the final image displayed on-screen
         if not self.display_final_image:
             plt.ioff()
@@ -301,16 +325,16 @@ class PaintPour:
             plot_colormap(cmap=self.base_colormap, plot_title='Your base colormap, ' + self.base_colormap.name)
 
         # Make a segmented colormap, UNLESS the user specified 'continuous' for num_colormap_levels
-        if self.num_colormap_levels != 'use base colormap':
-            # Use pre-generated random values for deterministic behavior
-            # Take only the number of colors we need from the pre-generated values
-            colors = self._random_colormap_colors[:self.num_colormap_levels]
-            nodes = np.sort(self._random_colormap_nodes[:len(colors) - 2])
-            nodes = [0] + list(nodes) + [1]  # The first and last nodes must be 0 and 1, respectively.
+        # if self.num_colormap_levels != 'use base colormap':
+        # Use pre-generated random values for deterministic behavior
+        # Take only the number of colors we need from the pre-generated values
+        colors = self._random_colormap_colors[:self.num_colormap_levels]
+        nodes = np.sort(self._random_colormap_nodes[:len(colors) - 2])
+        nodes = [0] + list(nodes) + [1]  # The first and last nodes must be 0 and 1, respectively.
 
-            # Convert the colors and nodes to a format suitable for a segmented colormap, if needed
-            if self.use_segmented_colormap:
-                colors, nodes = convert_colors_and_nodes_for_segmented_cmap(colors, nodes)
+        # Convert the colors and nodes to a format suitable for a segmented colormap, if needed
+        if self.use_segmented_colormap:
+            colors, nodes = convert_colors_and_nodes_for_segmented_cmap(colors, nodes)
 
             # Two identical nodes in a row will create a sharp boundary between two colors. 
             # Take the left of these two nodes as subtract from it a fraction of the difference between it and the node prior
@@ -323,14 +347,14 @@ class PaintPour:
             nodes = np.delete(nodes, indices_to_remove)
             colors = np.delete(colors, indices_to_remove)
 
-            print(f'\t Final colormap will have {self.num_colormap_levels} distinct levels')
-            self.final_colormap = make_custom_colormap(colors=self.base_colormap(colors), nodes=nodes,
-                                        cmap_name=self.base_colormap.name, show_plot=False)
+        print(f'\t Final colormap will have {self.num_colormap_levels} distinct levels')
+        self.final_colormap = make_custom_colormap(colors=self.base_colormap(colors), nodes=nodes,
+                                    cmap_name=self.base_colormap.name, show_plot=False)
 
-            # Plot the final segmented colormap, if desired
-            if self.show_intermediate_plots:
-                self.final_colormap = self.final_colormap.resampled(10000)
-                plot_colormap(cmap=self.final_colormap, nodes=nodes, plot_title='Your final colormap')
+        # Plot the final colormap, if desired
+        if self.show_intermediate_plots:
+            self.final_colormap = self.final_colormap.resampled(10000)
+            plot_colormap(cmap=self.final_colormap, nodes=nodes, plot_title='Your final colormap')
 
         else:
             self.final_colormap = self.base_colormap.copy()

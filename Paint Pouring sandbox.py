@@ -23,9 +23,9 @@ image_dimensions = [1080, 1080]
 display_final_image = False        # Display the image on the screen?
 save_image = True                # Save a .png copy of your image?
 num_images = 1                  # How many images to produce?
-show_intermediate_plots = False  # Show intermediate results for troubleshooting?
+show_intermediate_plots = True  # Show intermediate results for troubleshooting?
 seed = 1                    # Set a seed for reproducibility. If None, a seed is chosen randomly.
-base_cmap_name = 'custom'              # Colormap: 'any', 'custom', or a matplotlib colormap name like 'viridis' or 'bone'
+base_cmap_name = 'viridis'              # Colormap: 'any', 'custom', or a matplotlib colormap name like 'viridis' or 'bone'
 output_directory = './outputs/testing/'
 
 
@@ -51,7 +51,7 @@ results = pptools.generate_paint_pour_images(
         "#e0aa7f"
     ], 
     seed=seed,
-    add_cells=True,
+    prominent_cells=False,
 )
 
 print(f'Successfully generated {len(results)} images!')   
