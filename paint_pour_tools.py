@@ -867,7 +867,7 @@ def make_voronoi(npoints, width, height):
     return Voronoi(points)
 
 
-def voronoi_to_points(voronoi, spacing):
+def voronoi_to_points(voronoi, spacing=1):
     """
     Convert Voronoi diagram ridges to a series of (x, y) points with specified spacing.
 
