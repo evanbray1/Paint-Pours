@@ -28,9 +28,7 @@ seed = 1                    # Set a seed for reproducibility. If None, a seed is
 base_cmap_name = 'custom'              # Colormap: 'any', 'custom', or a matplotlib colormap name like 'viridis' or 'bone'
 output_directory = './outputs/recreating pour from emily/'
 
-# dummy commit 1
-# dummy commit 2
-# dummy commit 3
+# mumbo jumbo 1
 
 ##########################################
 print(f'Generating {num_images} paint pour images...')
