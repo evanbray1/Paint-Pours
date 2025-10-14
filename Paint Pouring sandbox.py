@@ -30,6 +30,7 @@ output_directory = './outputs/recreating pour from emily/'
 
 # dummy commit 1
 # dummy commit 2
+# dummy commit 3
 
 ##########################################
 print(f'Generating {num_images} paint pour images...')
