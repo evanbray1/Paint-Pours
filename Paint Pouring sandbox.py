@@ -29,6 +29,7 @@ base_cmap_name = 'custom'              # Colormap: 'any', 'custom', or a matplot
 output_directory = './outputs/recreating pour from emily/'
 
 # dummy commit 1
+# dummy commit 2
 
 ##########################################
 print(f'Generating {num_images} paint pour images...')
