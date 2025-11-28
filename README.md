@@ -80,5 +80,6 @@ Questions, suggestions, or feedback? Contact the author:
 ## Image Gallery
 A small, arbitrarily-chosen collection of images that this script is capable of producing. 
 
-<img width="1965" height="1107" alt="image" src="https://github.com/user-attachments/assets/b68c49b7-bc41-401c-b857-113d5ed86162" />
+<img width="1269" height="715" alt="Figure_1" src="https://github.com/user-attachments/assets/b48f80b1-5f88-4ef8-8d71-61b526523d9f" />
+
 
