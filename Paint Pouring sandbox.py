@@ -1,7 +1,8 @@
 #%%
+import sys
+import numpy as np
 import paint_pour_tools as pptools
-from matplotlib import use
-# import numpy as np
+# from matplotlib import use
 # import matplotlib.pyplot as plt
 
 # Depending on which IDE you're using, you might need to change this line, or comment it out entirely.
@@ -22,11 +23,11 @@ from matplotlib import use
 image_dimensions = [1080, 1080]
 display_final_image = False        # Display the image on the screen?
 save_image = True                # Save a .png copy of your image?
-num_images = 1                  # How many images to produce?
+num_images = 30                  # How many images to produce?
 show_intermediate_plots = True  # Show intermediate results for troubleshooting?
-seed = 1                    # Set a seed for reproducibility. If None, a seed is chosen randomly.
+seed = None                 # Set a seed for reproducibility. If None, a seed is chosen randomly.
 base_cmap_name = 'custom'              # Colormap: 'any', 'custom', or a matplotlib colormap name like 'viridis' or 'bone'
-output_directory = './outputs/recreating pour from emily/'
+output_directory = './outputs/Kayla custom (desert cactus)/'
 
 ##########################################
 print(f'Generating {num_images} paint pour images...')
@@ -41,15 +42,19 @@ results = pptools.generate_paint_pour_images(
     base_cmap_name=base_cmap_name,
     output_directory=output_directory,
     use_segmented_colormap=True,
+    num_colormap_levels=50,
     custom_cmap_colors=[
-        "#e8e2d4",
-        "#020a17",
-        "#da612d",
-        "#5e6563",
-        "#cdd7d5",
-        "#e0aa7f"
+        "#d45c54",
+        "#f4a2a7",
+        "#8c9cb6",
+        "#5c7265",
+        "#778b8a",
+        "#eee2ee"
     ], 
     seed=seed
 )
 
 print(f'Successfully generated {len(results)} images!')   
+
+# %%
+
