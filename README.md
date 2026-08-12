@@ -1,6 +1,6 @@
 # Paint Pour Digital Art Generator
 
-<p align="center"><img width="652" height="1102" alt="image" src="https://github.com/user-attachments/assets/8257179e-fcb8-42fc-92e0-cfd89093e73f" /></p>
+<p align="center"><img width="1252" height="1102" alt="image" src="https://github.com/user-attachments/assets/8257179e-fcb8-42fc-92e0-cfd89093e73f" /></p>
 
 
 
